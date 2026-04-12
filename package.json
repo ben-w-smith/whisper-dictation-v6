@@ -18,7 +18,9 @@
     "lint": "tsc --noEmit",
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
-    "app": "electron-vite build && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --dir --config.mac.hardenedRuntime=false && open 'dist/mac-arm64/Whisper Dictation.app'"
+    "app": "electron-vite build && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --dir --config.mac.hardenedRuntime=false && open 'dist/mac-arm64/Whisper Dictation.app'",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
   },
   "dependencies": {
     "@nut-tree-fork/nut-js": "^4.2.0",
@@ -31,6 +33,7 @@
     "@electron-toolkit/preload": "^3.0.0",
     "@electron-toolkit/utils": "^3.0.0",
     "@playwright/test": "^1.49.0",
+    "@storybook/react-vite": "^10.3.5",
     "@tailwindcss/vite": "^4.0.0",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
@@ -43,6 +46,7 @@
     "playwright": "^1.49.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "storybook": "^10.3.5",
     "tailwindcss": "^4.0.0",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"
