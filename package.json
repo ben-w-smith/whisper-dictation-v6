@@ -1,0 +1,57 @@
+{
+  "name": "whisper-dictation",
+  "version": "6.0.0",
+  "description": "macOS menu bar voice dictation app with local whisper.cpp transcription",
+  "main": "./out/main/index.js",
+  "author": "Ben Smith",
+  "license": "MIT",
+  "scripts": {
+    "setup": "bash scripts/setup-whisper.sh && bash scripts/setup-llama.sh",
+    "setup:whisper": "bash scripts/setup-whisper.sh",
+    "setup:llama": "bash scripts/setup-llama.sh",
+    "dev": "ELECTRON_ENABLE_LOGGING=1 electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "lint": "tsc --noEmit",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "app": "electron-vite build && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --dir --config.mac.hardenedRuntime=false && open 'dist/mac-arm64/Whisper Dictation.app'"
+  },
+  "dependencies": {
+    "@nut-tree-fork/nut-js": "^4.2.0",
+    "@xstate/react": "^4.1.0",
+    "electron-store": "^10.0.0",
+    "keytar": "^7.9.0",
+    "xstate": "^5.19.0"
+  },
+  "devDependencies": {
+    "@electron-toolkit/preload": "^3.0.0",
+    "@electron-toolkit/utils": "^3.0.0",
+    "@playwright/test": "^1.49.0",
+    "@tailwindcss/vite": "^4.0.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.0",
+    "electron": "^41.0.0",
+    "electron-builder": "^25.1.0",
+    "electron-playwright-mcp": "^1.0.1",
+    "electron-vite": "^5.0.0",
+    "playwright": "^1.49.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "electron",
+      "keytar",
+      "esbuild"
+    ]
+  }
+}

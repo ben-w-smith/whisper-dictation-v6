@@ -1,0 +1,52 @@
+// Typed IPC channel definitions
+export const IPC = {
+  // Renderer -> Main
+  START_WHISPER: 'whisper:start',
+  WRITE_CLIPBOARD: 'clipboard:write',
+  AUTO_PASTE: 'clipboard:paste',
+  SAVE_HISTORY: 'history:save',
+  GET_SETTINGS: 'settings:get',
+  SET_SETTING: 'settings:set',
+  GET_HISTORY: 'history:get',
+  CHECK_PERMISSIONS: 'permissions:check',
+  DOWNLOAD_MODEL: 'model:download',
+  GET_DOWNLOADED_MODELS: 'model:downloaded-list',
+  OPEN_SETTINGS: 'window:settings',
+  OPEN_ABOUT: 'window:about',
+  QUIT_APP: 'app:quit',
+  REFINE_TEXT: 'refine:text',
+  SET_WINDOW_MODE: 'window:set-mode',
+  UPDATE_TRAY_STATE: 'tray:update-state',
+  PAUSE_HOTKEY: 'hotkey:pause',
+  RESUME_HOTKEY: 'hotkey:resume',
+  REQUEST_MICROPHONE: 'permissions:request-microphone',
+  OPEN_SYSTEM_SETTINGS: 'app:open-system-settings',
+
+  // Main -> Renderer
+  HISTORY_UPDATED: 'history:updated',
+  WHISPER_RESULT: 'whisper:result',
+  WHISPER_ERROR: 'whisper:error',
+  HOTKEY_TRIGGERED: 'hotkey:triggered',
+  FORCE_START_RECORDING: 'recording:force-start',
+  SETTINGS_UPDATED: 'settings:updated',
+  DOWNLOAD_PROGRESS: 'model:download-progress',
+  DOWNLOAD_COMPLETE: 'model:download-complete',
+  REFINEMENT_SKIPPED: 'refinement:skipped',
+  LLAMA_SERVER_STATUS: 'llama:status',
+
+  REQUEST_ACCESSIBILITY: 'permissions:request-accessibility',
+
+  // Overlay -> Main -> Background (relay through main process)
+  OVERLAY_DISMISS: 'overlay:dismiss',
+  OVERLAY_READY: 'overlay:ready',
+
+  // Debug
+  DEBUG_QUERY: 'debug:query',
+
+  // Test-only channels (gated on NODE_ENV === 'test')
+  TEST_MOCK_TRANSCRIPTION: 'test:mock-transcription',
+  TEST_READ_CLIPBOARD: 'test:read-clipboard',
+  TEST_COMPLETE_ONBOARDING: 'test:complete-onboarding',
+} as const
+
+export type IpcChannel = (typeof IPC)[keyof typeof IPC]

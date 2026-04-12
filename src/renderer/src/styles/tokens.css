@@ -1,0 +1,81 @@
+@import "tailwindcss";
+
+@theme {
+  /* Design tokens as CSS custom properties */
+  --color-canvas: #fafaf9;
+  --color-surface: #ffffff;
+  --color-overlay: rgba(15, 15, 18, 0.85);
+  --color-text-primary: #1c1917;
+  --color-text-secondary: #78716c;
+  --color-text-muted: #a8a29e;
+  --color-accent: #0d9488;
+  --color-accent-hover: #0f766e;
+  --color-accent-subtle: #f0fdfa;
+  --color-border-custom: #e7e5e4;
+  --color-recording: #ef4444;
+  --color-transcribing: #3b82f6;
+  --color-complete: #22c55e;
+  --color-error: #f97316;
+
+  /* Spacing */
+  --spacing-section: 24px;
+}
+
+/* Tailwind utility extensions */
+@utility text-primary {
+  color: var(--color-text-primary);
+}
+
+@utility text-secondary {
+  color: var(--color-text-secondary);
+}
+
+@utility text-muted {
+  color: var(--color-text-muted);
+}
+
+@utility bg-canvas {
+  background-color: var(--color-canvas);
+}
+
+@utility bg-surface {
+  background-color: var(--color-surface);
+}
+
+@utility bg-overlay {
+  background-color: var(--color-overlay);
+}
+
+@utility bg-accent-subtle {
+  background-color: var(--color-accent-subtle);
+}
+
+@utility border-border-custom {
+  border-color: var(--color-border-custom);
+}
+
+/* Global styles */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Utility classes for text clamping */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}

@@ -1,0 +1,12 @@
+node_modules/
+out/
+dist/
+*.env
+*.env.local
+.DS_Store
+Thumbs.db
+.mcp.json
+
+# Bundled binaries and dylibs — copied from Homebrew, not committed to git
+bin/llama-server
+bin/*.dylib
