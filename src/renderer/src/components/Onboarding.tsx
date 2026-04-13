@@ -8,10 +8,11 @@ type OnboardingStep = 1 | 2 | 3
 
 interface OnboardingProps {
   onComplete: () => void
+  initialStep?: OnboardingStep
 }
 
-export function Onboarding({ onComplete }: OnboardingProps): React.ReactElement {
-  const [step, setStep] = useState<OnboardingStep>(1)
+export function Onboarding({ onComplete, initialStep = 1 }: OnboardingProps): React.ReactElement {
+  const [step, setStep] = useState<OnboardingStep>(initialStep)
   const [permissions, setPermissions] = useState<PermissionStatus>({
     microphone: 'prompt',
     accessibility: 'prompt',

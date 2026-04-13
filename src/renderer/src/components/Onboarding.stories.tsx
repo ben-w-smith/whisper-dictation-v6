@@ -5,7 +5,7 @@ const mockApi = {
   invoke: async (channel: string, ..._args: unknown[]) => {
     switch (channel) {
       case 'permissions:check':
-        return { microphone: 'prompt', accessibility: 'prompt' }
+        return { microphone: 'granted', accessibility: 'granted' }
       case 'settings:get':
         return {
           localModel: 'base.en',
@@ -45,5 +45,19 @@ type Story = StoryObj<typeof Onboarding>
 export const Step1Welcome: Story = {
   args: {
     onComplete: () => console.log('done'),
+  },
+}
+
+export const Step2Permissions: Story = {
+  args: {
+    onComplete: () => console.log('done'),
+    initialStep: 2,
+  },
+}
+
+export const Step3Model: Story = {
+  args: {
+    onComplete: () => console.log('done'),
+    initialStep: 3,
   },
 }

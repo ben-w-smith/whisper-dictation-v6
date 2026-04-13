@@ -55,7 +55,7 @@ export function Home({ onClose, initialPage = 'general' }: HomeProps): React.Rea
       {/* Main content */}
       <main className="flex-1 flex flex-col overflow-hidden">
         <header className="flex items-center justify-between px-6 py-4 border-b border-border-custom bg-surface">
-          <h2 className="text-xl font-semibold text-text-primary capitalize">{activePage}</h2>
+          <h2 className="text-xl font-semibold text-text-primary">{pages.find(p => p.id === activePage)?.label ?? activePage}</h2>
           <button
             onClick={handleClose}
             className="p-2 text-text-secondary hover:text-text-primary hover:bg-stone-100 rounded-lg transition-colors"
