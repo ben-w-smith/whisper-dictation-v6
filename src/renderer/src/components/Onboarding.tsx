@@ -16,7 +16,7 @@ export function Onboarding({ onComplete }: OnboardingProps): React.ReactElement 
     microphone: 'prompt',
     accessibility: 'prompt',
   })
-  const [keyboardShortcut, setKeyboardShortcut] = useState(DEFAULT_SETTINGS.keyboardShortcut)
+  const [keyboardShortcuts, setKeyboardShortcuts] = useState<string[]>(DEFAULT_SETTINGS.keyboardShortcuts)
   const [mouseButton, setMouseButton] = useState<number | null>(DEFAULT_SETTINGS.mouseButton)
   const [selectedModel, setSelectedModel] = useState<LocalModel>(DEFAULT_SETTINGS.localModel)
   const [downloadProgress, setDownloadProgress] = useState(0)
@@ -65,7 +65,7 @@ export function Onboarding({ onComplete }: OnboardingProps): React.ReactElement 
   }, [])
 
   const handleFinish = async () => {
-    await window.api.invoke(IPC.SET_SETTING, 'keyboardShortcut', keyboardShortcut)
+    await window.api.invoke(IPC.SET_SETTING, 'keyboardShortcuts', keyboardShortcuts)
     await window.api.invoke(IPC.SET_SETTING, 'mouseButton', mouseButton)
     await window.api.invoke(IPC.SET_SETTING, 'localModel', selectedModel)
     await window.api.invoke(IPC.SET_SETTING, 'onboardingComplete', true)
@@ -78,7 +78,7 @@ export function Onboarding({ onComplete }: OnboardingProps): React.ReactElement 
   }
 
   const canProceedFromStep2 = () => {
-    return permissions.microphone === 'granted' && (keyboardShortcut || mouseButton !== null)
+    return permissions.microphone === 'granted' && (keyboardShortcuts.length > 0 || mouseButton !== null)
   }
 
   return (
@@ -194,10 +194,10 @@ export function Onboarding({ onComplete }: OnboardingProps): React.ReactElement 
                   Press a key combination or mouse button
                 </div>
                 <ShortcutRecorder
-                  value={keyboardShortcut}
+                  value={keyboardShortcuts[0] ?? null}
                   mouseButton={mouseButton}
                   onChange={(keyboard, mouse) => {
-                    setKeyboardShortcut(keyboard ?? DEFAULT_SETTINGS.keyboardShortcut)
+                    setKeyboardShortcuts(keyboard ? [keyboard] : DEFAULT_SETTINGS.keyboardShortcuts)
                     setMouseButton(mouse)
                   }}
                 />

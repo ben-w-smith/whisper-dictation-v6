@@ -6,7 +6,7 @@ import { APP_NAME, DEFAULT_SETTINGS } from '@shared/constants'
 
 // Main process services
 import { createTrayMenu, updateTrayState } from './tray'
-import { registerHotkeys, registerMouseButton, unregisterHotkeys, updateShortcut } from './hotkeys'
+import { registerHotkeys, registerMouseButton, unregisterHotkeys, updateShortcuts } from './hotkeys'
 import { registerIpcHandlers, setTrayRef } from './ipc'
 import { getSettings } from './store'
 import { requestMicrophonePermission } from './permissions'
@@ -92,29 +92,29 @@ async function setupHotkeys(): Promise<void> {
   if (!mainWindow) return
 
   const settings = await getSettings()
-  const shortcut = settings.keyboardShortcut || DEFAULT_SETTINGS.keyboardShortcut
+  const shortcuts = settings.keyboardShortcuts?.length
+    ? settings.keyboardShortcuts
+    : DEFAULT_SETTINGS.keyboardShortcuts
   const mouseButton = settings.mouseButton
 
   const callback = () => {
     mainWindow?.webContents.send(IPC.HOTKEY_TRIGGERED)
   }
 
-  // Try to register mouse button first if set, otherwise use keyboard
+  // Try to register mouse button first if set
   if (mouseButton !== null) {
-    // Note: Mouse button support requires native module (iohook)
-    // For MVP, this will log a warning and we'll fall back to keyboard
     const mouseSuccess = registerMouseButton(mouseButton, callback)
     if (!mouseSuccess) {
-      // Fall back to keyboard shortcut
-      const keyboardSuccess = registerHotkeys(shortcut, callback)
+      // Fall back to keyboard shortcuts
+      const keyboardSuccess = registerHotkeys(shortcuts, callback)
       if (!keyboardSuccess) {
-        console.error('[Main] Failed to register keyboard shortcut:', shortcut)
+        console.error('[Main] Failed to register keyboard shortcuts:', shortcuts)
       }
     }
   } else {
-    const success = registerHotkeys(shortcut, callback)
+    const success = registerHotkeys(shortcuts, callback)
     if (!success) {
-      console.error('[Main] Failed to register default hotkey:', shortcut)
+      console.error('[Main] Failed to register default hotkeys:', shortcuts)
     }
   }
 }

@@ -8,7 +8,7 @@ import { getAudioCapture, type AudioCaptureResult } from './audio/capture'
 import { IPC } from '@shared/ipc'
 import { getDebugBus } from '@shared/debug'
 import type { AppSettings, AppError } from '@shared/types'
-import { DEFAULT_SETTINGS } from '@shared/constants'
+import { DEFAULT_SETTINGS, WAVEFORM_GRADIENT, WAVEFORM_BAR_COUNT } from '@shared/constants'
 
 function useHash(): string {
   const [hash, setHash] = useState(window.location.hash)
@@ -65,24 +65,45 @@ function OnboardingWindow(): React.ReactElement {
 /**
  * Overlay page — runs in a small frameless window, shows recording status
  * Receives state updates from the background window via IPC relay
+ * Uses rAF for waveform bars to bypass React rendering overhead
  */
 function OverlayWindow(): React.ReactElement {
   const [overlayState, setOverlayState] = useState<string>('idle')
-  const [audioLevels, setAudioLevels] = useState<number[]>([])
-  const [elapsedMs, setElapsedMs] = useState(0)
-  const [transcriptionText, setTranscriptionText] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
   const [errorSuggestion, setErrorSuggestion] = useState('')
   const [errorCode, setErrorCode] = useState('')
   const [refinementSkipped, setRefinementSkipped] = useState(false)
+  // Ref-based audio levels — updated directly, bypassing React state for zero-lag bars
+  const audioLevelsRef = useRef<number[]>([])
+  const barsRef = useRef<(HTMLDivElement | null)[]>([])
+  const rafRef = useRef<number>(0)
+
+  // rAF loop — reads levels from ref, writes CSS heights directly to DOM elements
+  useEffect(() => {
+    const tick = () => {
+      const levels = audioLevelsRef.current
+      const bars = barsRef.current
+      for (let i = 0; i < WAVEFORM_BAR_COUNT; i++) {
+        const bar = bars[i]
+        if (!bar) continue
+        // Map 12 bars across the level buffer with interpolation
+        const levelIndex = Math.floor((i / WAVEFORM_BAR_COUNT) * levels.length)
+        const level = levels[levelIndex] ?? 0
+        const height = Math.max(3, Math.min(24, level * 240))
+        bar.style.height = `${height}px`
+      }
+      rafRef.current = requestAnimationFrame(tick)
+    }
+    rafRef.current = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(rafRef.current)
+  }, [])
 
   useEffect(() => {
     const unsubState = window.api.on('overlay:state-update', (data: unknown) => {
       const d = data as { state: string; audioLevels: number[]; elapsedMs: number; text: string; error: string; errorSuggestion?: string; errorCode?: string; refinementSkipped?: boolean }
       setOverlayState(d.state)
-      setAudioLevels(d.audioLevels)
-      setElapsedMs(d.elapsedMs)
-      setTranscriptionText(d.text)
+      // Write directly to ref for rAF — no React state update for audio levels
+      audioLevelsRef.current = d.audioLevels
       setErrorMessage(d.error)
       setErrorSuggestion(d.errorSuggestion ?? '')
       setErrorCode(d.errorCode ?? '')
@@ -95,6 +116,16 @@ function OverlayWindow(): React.ReactElement {
     window.api.send(IPC.OVERLAY_READY)
 
     return () => { unsubState() }
+  }, [])
+
+  const handleCancel = useCallback(() => {
+    window.api.send(IPC.OVERLAY_CANCEL)
+  }, [])
+
+  const handleStop = useCallback(() => {
+    // During recording, the stop button sends HOTKEY_TRIGGERED to toggle recording off
+    // The background window handles it as HOTKEY_PRESSED which transitions recording → transcribing
+    window.api.send(IPC.OVERLAY_DISMISS, { action: 'STOP_RECORDING' })
   }, [])
 
   const handleOverlayClick = useCallback(() => {
@@ -110,54 +141,65 @@ function OverlayWindow(): React.ReactElement {
     window.api.send(IPC.OVERLAY_DISMISS, { action: 'ERROR_DISMISSED' })
   }, [])
 
-  // Minimal overlay rendering
   if (overlayState === 'idle') return <></>
-
-  const elapsedSeconds = Math.floor(elapsedMs / 1000)
-  const elapsedFormatted = `${Math.floor(elapsedSeconds / 60)}:${String(elapsedSeconds % 60).padStart(2, '0')}`
 
   return (
     <div
       className={`h-full flex items-center justify-center ${
-        overlayState === 'complete' || overlayState === 'error' ? 'cursor-pointer' : 'pointer-events-none'
+        overlayState === 'complete' || overlayState === 'error' ? 'cursor-pointer' : ''
       }`}
       onClick={handleOverlayClick}
     >
-      <div className="bg-stone-900/85 backdrop-blur-xl rounded-full px-5 py-3 shadow-2xl border border-white/10 w-full">
-        <div className="flex items-center justify-between">
+      <div className="bg-stone-900/85 backdrop-blur-xl rounded-full px-3 py-2.5 shadow-2xl border border-white/10 w-full">
+        <div className="flex items-center justify-between gap-2">
           {overlayState === 'recording' && (
             <>
-              <div className="flex items-center gap-2">
-                <div className="relative w-3 h-3">
-                  <div className="absolute inset-0 bg-red-500 rounded-full animate-ping" />
-                  <div className="absolute inset-0 bg-red-500 rounded-full" />
-                </div>
-                <span className="text-white/90 font-medium tabular-nums">{elapsedFormatted}</span>
+              {/* Cancel button (X) */}
+              <button
+                onClick={(e) => { e.stopPropagation(); handleCancel() }}
+                className="shrink-0 w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+              >
+                <svg className="w-3.5 h-3.5 text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+
+              {/* Waveform bars — rAF-driven, no React state */}
+              <div className="flex-1 flex items-center justify-center gap-[3px] h-7">
+                {[...Array(WAVEFORM_BAR_COUNT)].map((_, i) => (
+                  <div
+                    key={i}
+                    ref={(el) => { barsRef.current[i] = el }}
+                    className="w-[2px] rounded-full transition-none"
+                    style={{
+                      backgroundColor: WAVEFORM_GRADIENT[i],
+                      height: '3px',
+                    }}
+                  />
+                ))}
               </div>
-              <div className="flex items-end gap-0.5 h-4">
-                {[...Array(5)].map((_, i) => {
-                  const level = audioLevels[i] ?? 0
-                  const height = Math.max(4, Math.min(16, level * 160))
-                  return <div key={i} className="w-1 bg-red-400 rounded-full transition-all duration-75" style={{ height: `${height}px` }} />
-                })}
-              </div>
+
+              {/* Stop button */}
+              <button
+                onClick={(e) => { e.stopPropagation(); handleStop() }}
+                className="shrink-0 w-7 h-7 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center transition-colors"
+              >
+                <div className="w-2.5 h-2.5 rounded-sm bg-white" />
+              </button>
             </>
           )}
+
           {overlayState === 'transcribing' && (
-            <div className="flex items-center gap-2">
-              <svg className="w-4 h-4 text-blue-400 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-              </svg>
-              <span className="text-white/90 text-sm">Transcribing...</span>
+            <div className="flex-1 flex items-center justify-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
             </div>
           )}
+
           {overlayState === 'complete' && (
-            <div className="flex items-center gap-2">
+            <div className="flex-1 flex items-center justify-center gap-2">
               <svg className="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
-              <span className="text-white/90 font-medium">Copied</span>
               {refinementSkipped && (
                 <span className="text-amber-400/80 text-xs ml-1" title="AI refinement was skipped due to an error">
                   (unrefined)
@@ -165,20 +207,21 @@ function OverlayWindow(): React.ReactElement {
               )}
             </div>
           )}
+
           {overlayState === 'error' && (
-            <div className="flex items-start gap-2 w-full">
-              <svg className="w-5 h-5 text-orange-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="flex items-start gap-2 w-full px-1">
+              <svg className="w-4 h-4 text-orange-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
               <div className="flex-1 min-w-0">
-                <div className="text-white/90 text-sm font-medium">{errorMessage || 'Error'}</div>
+                <div className="text-white/90 text-xs font-medium">{errorMessage || 'Error'}</div>
                 {errorSuggestion && (
-                  <div className="text-white/60 text-xs mt-0.5 leading-snug">{errorSuggestion}</div>
+                  <div className="text-white/50 text-[10px] mt-0.5 leading-snug">{errorSuggestion}</div>
                 )}
                 {(errorCode === 'MICROPHONE_DENIED') && (
                   <button
                     onClick={(e) => { e.stopPropagation(); handleOpenSettings('microphone') }}
-                    className="mt-1.5 text-xs text-teal-400 hover:text-teal-300 underline underline-offset-2"
+                    className="mt-1 text-[10px] text-teal-400 hover:text-teal-300 underline underline-offset-1"
                   >
                     Open System Settings →
                   </button>
@@ -186,7 +229,7 @@ function OverlayWindow(): React.ReactElement {
                 {(errorCode === 'AUTO_PASTE_FAILED') && (
                   <button
                     onClick={(e) => { e.stopPropagation(); handleOpenSettings('accessibility') }}
-                    className="mt-1.5 text-xs text-teal-400 hover:text-teal-300 underline underline-offset-2"
+                    className="mt-1 text-[10px] text-teal-400 hover:text-teal-300 underline underline-offset-1"
                   >
                     Open System Settings →
                   </button>
@@ -303,8 +346,17 @@ function DictationApp(): React.ReactElement {
 
     // Relay overlay dismiss events (click on complete/error) to the state machine
     const unsubDismiss = window.api.on(IPC.OVERLAY_DISMISS, (data: unknown) => {
-      const d = data as { action: 'COMPLETE_ACKNOWLEDGED' | 'ERROR_DISMISSED' }
-      send({ type: d.action })
+      const d = data as { action: string }
+      if (d.action === 'STOP_RECORDING') {
+        send({ type: 'HOTKEY_PRESSED' })
+      } else {
+        send({ type: d.action as 'COMPLETE_ACKNOWLEDGED' | 'ERROR_DISMISSED' })
+      }
+    })
+
+    // Relay overlay cancel (X button) to the state machine
+    const unsubCancel = window.api.on(IPC.OVERLAY_CANCEL, () => {
+      send({ type: 'CANCEL' })
     })
 
     // Show indicator when AI refinement was skipped due to failure
@@ -328,6 +380,7 @@ function DictationApp(): React.ReactElement {
       unsubResult()
       unsubError()
       unsubDismiss()
+      unsubCancel()
       unsubRefinementSkipped()
       unsubOverlayReady()
       window.removeEventListener('__test_hotkey', testHotkeyHandler)
@@ -367,8 +420,8 @@ function DictationApp(): React.ReactElement {
         setElapsedMs(capture.getDurationMs())
       }, 100)
 
-      // Fast-path: send audio levels directly to overlay every 50ms (twice as fast)
-      // This bypasses the state machine's React batching to reduce the 2-3 second lag
+      // Fast-path: send audio levels directly to overlay every 33ms (~30fps)
+      // This bypasses the state machine's React batching for responsive waveform bars
       overlayAudioIntervalRef.current = setInterval(() => {
         if (overlayModeRef.current === 'overlay') {
           const levels = latestAudioLevelsRef.current
@@ -385,8 +438,13 @@ function DictationApp(): React.ReactElement {
             refinementSkipped: false,
           })
         }
-      }, 50)
+      }, 33)
     } else if (state.matches('transcribing')) {
+      // Play stop sound when recording ends
+      if (settings.playSounds) {
+        playDescendingTone(660, 440, 150)
+      }
+
       if (audioIntervalRef.current) {
         clearInterval(audioIntervalRef.current)
         audioIntervalRef.current = null
@@ -442,6 +500,11 @@ function DictationApp(): React.ReactElement {
         send({ type: 'TRANSCRIPTION_FAILURE', error: error as AppError })
       })
     } else if (state.matches('complete')) {
+      // Play completion chime when transcription finishes
+      if (settings.playSounds) {
+        playAscendingTone(880, 1100, 180)
+      }
+
       const text = state.context.transcriptionText
       if (text) {
         if (settings.copyToClipboard) {
@@ -549,18 +612,43 @@ function DictationApp(): React.ReactElement {
  */
 function playTone(frequency: number, durationMs: number): void {
   try {
-    // Generate a simple WAV beep as a data URI (880Hz for ~150ms)
     const sampleRate = 44100
     const numSamples = (sampleRate * durationMs) / 1000
     const wavData = generateWavData(frequency, numSamples, sampleRate)
     const audio = new Audio(`data:audio/wav;base64,${wavData}`)
     audio.volume = 0.3
-    audio.play().catch(() => {
-      // Silently fail — non-critical UI feedback
-    })
+    audio.play().catch(() => {})
   } catch {
     // Silently fail — non-critical UI feedback
   }
+}
+
+/**
+ * Play a descending two-tone (startFreq → endFreq) for recording stop feedback.
+ */
+function playDescendingTone(startFreq: number, endFreq: number, durationMs: number): void {
+  try {
+    const sampleRate = 44100
+    const numSamples = (sampleRate * durationMs) / 1000
+    const wavData = generateSweepWavData(startFreq, endFreq, numSamples, sampleRate)
+    const audio = new Audio(`data:audio/wav;base64,${wavData}`)
+    audio.volume = 0.25
+    audio.play().catch(() => {})
+  } catch {}
+}
+
+/**
+ * Play an ascending two-tone (startFreq → endFreq) for transcription complete feedback.
+ */
+function playAscendingTone(startFreq: number, endFreq: number, durationMs: number): void {
+  try {
+    const sampleRate = 44100
+    const numSamples = (sampleRate * durationMs) / 1000
+    const wavData = generateSweepWavData(startFreq, endFreq, numSamples, sampleRate)
+    const audio = new Audio(`data:audio/wav;base64,${wavData}`)
+    audio.volume = 0.2
+    audio.play().catch(() => {})
+  } catch {}
 }
 
 /**
@@ -611,6 +699,63 @@ function generateWavData(frequency: number, numSamples: number, sampleRate: numb
   }
 
   // Convert to base64
+  const bytes = new Uint8Array(buffer)
+  const chunks: string[] = []
+  const chunkSize = 0x8000
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, Math.min(i + chunkSize, bytes.length))
+    chunks.push(String.fromCharCode.apply(null, Array.from(chunk)))
+  }
+  return btoa(chunks.join(''))
+}
+
+/**
+ * Generate a WAV file with a frequency sweep (startFreq → endFreq).
+ * Used for descending (stop) and ascending (complete) two-tone sounds.
+ */
+function generateSweepWavData(startFreq: number, endFreq: number, numSamples: number, sampleRate: number): string {
+  const numChannels = 1
+  const bitsPerSample = 16
+  const byteRate = sampleRate * numChannels * bitsPerSample / 8
+  const blockAlign = numChannels * bitsPerSample / 8
+  const dataSize = numSamples * blockAlign
+  const buffer = new ArrayBuffer(44 + dataSize)
+  const view = new DataView(buffer)
+
+  writeString(view, 0, 'RIFF')
+  view.setUint32(4, 36 + dataSize, true)
+  writeString(view, 8, 'WAVE')
+  writeString(view, 12, 'fmt ')
+  view.setUint32(16, 16, true)
+  view.setUint16(20, 1, true)
+  view.setUint16(22, numChannels, true)
+  view.setUint32(24, sampleRate, true)
+  view.setUint32(28, byteRate, true)
+  view.setUint16(32, blockAlign, true)
+  view.setUint16(34, bitsPerSample, true)
+  writeString(view, 36, 'data')
+  view.setUint32(40, dataSize, true)
+
+  let offset = 44
+  let phase = 0
+  for (let i = 0; i < numSamples; i++) {
+    const t = i / numSamples
+    const freq = startFreq + (endFreq - startFreq) * t
+    phase += (2 * Math.PI * freq) / sampleRate
+    // Fade envelope to prevent clicking
+    let envelope = 1
+    const fadeSamples = sampleRate * 0.01
+    if (i < fadeSamples) {
+      envelope = i / fadeSamples
+    } else if (i > numSamples - fadeSamples) {
+      envelope = (numSamples - i) / fadeSamples
+    }
+    const sample = Math.sin(phase) * 0.5 * envelope
+    const s16 = sample < 0 ? sample * 0x8000 : sample * 0x7FFF
+    view.setInt16(offset, Math.max(-32768, Math.min(32767, s16)), true)
+    offset += 2
+  }
+
   const bytes = new Uint8Array(buffer)
   const chunks: string[] = []
   const chunkSize = 0x8000
