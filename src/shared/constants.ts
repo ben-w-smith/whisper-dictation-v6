@@ -15,6 +15,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   showOverlay: true,
   playSounds: true,
   onboardingComplete: false,
+  dictionary: [],
 }
 
 // Audio
@@ -40,23 +41,15 @@ export const GGUF_META_FILE = 'gguf-meta.json'
 export const COMPLETE_DISPLAY_MS = 500
 export const ERROR_DISPLAY_MS = 8000
 
-// Overlay waveform gradient colors (left to right across 12 bars)
+// Overlay waveform gradient colors (left to right across 16 bars)
 export const WAVEFORM_GRADIENT = [
-  '#14b8a6', // teal-500
-  '#2dd4bf', // teal-400
-  '#5eead4', // teal-300
-  '#6ee7b7', // emerald-300
-  '#a78bfa', // violet-400
-  '#8b5cf6', // violet-500
-  '#7c3aed', // violet-600
-  '#a855f7', // purple-500
-  '#c084fc', // purple-400
-  '#d946ef', // fuchsia-500
-  '#e879f9', // fuchsia-400
-  '#ec4899', // pink-500
+  '#14b8a6', '#2dd4bf', '#5eead4', '#6ee7b7',
+  '#a78bfa', '#8b5cf6', '#7c3aed', '#a855f7',
+  '#c084fc', '#d946ef', '#e879f9', '#ec4899',
+  '#f472b6', '#fb7185', '#fda4af', '#fecdd3',
 ] as const
 
-export const WAVEFORM_BAR_COUNT = 12
+export const WAVEFORM_BAR_COUNT = 16
 
 // Design tokens
 export const DESIGN_TOKENS = {

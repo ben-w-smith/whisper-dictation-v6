@@ -64,7 +64,7 @@ export function ModelPage(): React.ReactElement {
   return (
     <div className="space-y-6">
       <section>
-        <h3 className="text-sm font-medium uppercase tracking-wide text-text-secondary mb-4">Local Model</h3>
+        <h3 className="text-[15px] font-semibold text-text-primary mb-4">Local Model</h3>
         <div className="space-y-3">
           {(Object.keys(MODEL_INFO) as LocalModel[]).map((model) => {
             const info = MODEL_INFO[model]
@@ -105,7 +105,7 @@ export function ModelPage(): React.ReactElement {
                         <span>Downloading</span>
                         <span>{progress}%</span>
                       </div>
-                      <div className="h-2 bg-stone-200 rounded-full overflow-hidden">
+                      <div className="h-2 bg-border-custom rounded-full overflow-hidden">
                         <div
                           className="h-full bg-accent transition-all duration-300"
                           style={{ width: `${progress}%` }}
@@ -113,7 +113,7 @@ export function ModelPage(): React.ReactElement {
                       </div>
                     </div>
                   ) : isDownloaded ? (
-                    <span className="ml-4 flex items-center gap-1 text-sm text-green-600">
+                    <span className="ml-4 flex items-center gap-1 text-sm text-success">
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>

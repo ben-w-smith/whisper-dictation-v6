@@ -13,7 +13,11 @@ const initialContext: PipelineContext = {
   transcriptionText: '',
   rawTranscriptionText: '',
   error: null,
-  elapsedMs: 0
+  elapsedMs: 0,
+  transcriptionModel: undefined,
+  transcriptionDurationMs: undefined,
+  refinementModel: undefined,
+  refinementDurationMs: undefined,
 }
 
 export const createPipelineMachine = () => {
@@ -62,7 +66,31 @@ export const createPipelineMachine = () => {
             return event.rawText
           }
           return ''
-        }
+        },
+        transcriptionModel: ({ event }) => {
+          if (event.type === 'TRANSCRIPTION_SUCCESS') {
+            return event.transcriptionModel
+          }
+          return undefined
+        },
+        transcriptionDurationMs: ({ event }) => {
+          if (event.type === 'TRANSCRIPTION_SUCCESS') {
+            return event.transcriptionDurationMs
+          }
+          return undefined
+        },
+        refinementModel: ({ event }) => {
+          if (event.type === 'TRANSCRIPTION_SUCCESS') {
+            return event.refinementModel
+          }
+          return undefined
+        },
+        refinementDurationMs: ({ event }) => {
+          if (event.type === 'TRANSCRIPTION_SUCCESS') {
+            return event.refinementDurationMs
+          }
+          return undefined
+        },
       }),
       setError: assign({
         error: ({ event }) => {

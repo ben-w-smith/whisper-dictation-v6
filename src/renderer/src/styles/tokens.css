@@ -2,20 +2,44 @@
 
 @theme {
   /* Design tokens as CSS custom properties */
+
+  /* Surfaces */
   --color-canvas: #fafaf9;
   --color-surface: #ffffff;
   --color-overlay: rgba(15, 15, 18, 0.85);
+
+  /* Text */
   --color-text-primary: #1c1917;
   --color-text-secondary: #78716c;
   --color-text-muted: #a8a29e;
+
+  /* Accent */
   --color-accent: #0d9488;
   --color-accent-hover: #0f766e;
   --color-accent-subtle: #f0fdfa;
+
+  /* Borders & dividers */
   --color-border-custom: #e7e5e4;
+  --color-border-hover: #d6d3d1;
+
+  /* Semantic state colors */
+  --color-success: #16a34a;
+  --color-success-subtle: #f0fdf4;
+  --color-warning: #d97706;
+  --color-warning-subtle: #fffbeb;
+  --color-danger: #dc2626;
+  --color-danger-subtle: #fef2f2;
+  --color-info: #3b82f6;
+  --color-info-subtle: #eff6ff;
+
+  /* Pipeline state colors (legacy names kept for overlay compatibility) */
   --color-recording: #ef4444;
   --color-transcribing: #3b82f6;
   --color-complete: #22c55e;
   --color-error: #f97316;
+
+  /* Focus */
+  --color-focus-ring: rgba(13, 148, 136, 0.3);
 
   /* Spacing */
   --spacing-section: 24px;
@@ -52,6 +76,68 @@
 
 @utility border-border-custom {
   border-color: var(--color-border-custom);
+}
+
+@utility border-border-hover {
+  border-color: var(--color-border-hover);
+}
+
+@utility text-success {
+  color: var(--color-success);
+}
+
+@utility text-warning {
+  color: var(--color-warning);
+}
+
+@utility text-danger {
+  color: var(--color-danger);
+}
+
+@utility text-info {
+  color: var(--color-info);
+}
+
+@utility bg-success-subtle {
+  background-color: var(--color-success-subtle);
+}
+
+@utility bg-warning-subtle {
+  background-color: var(--color-warning-subtle);
+}
+
+@utility bg-danger-subtle {
+  background-color: var(--color-danger-subtle);
+}
+
+@utility bg-info-subtle {
+  background-color: var(--color-info-subtle);
+}
+
+@utility bg-border-custom {
+  background-color: var(--color-border-custom);
+}
+
+@utility ring-focus {
+  --tw-ring-color: var(--color-focus-ring);
+}
+
+@utility focus-ring {
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--color-focus-ring);
+  }
+}
+
+/* Title bar drag region utilities (macOS hidden title bar) */
+@utility titlebar-drag {
+  -webkit-app-region: drag;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+@utility titlebar-no-drag {
+  -webkit-app-region: no-drag;
 }
 
 /* Global styles */

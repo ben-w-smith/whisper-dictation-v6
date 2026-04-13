@@ -14,7 +14,7 @@ import { createError } from '@shared/errors'
 import { checkAllPermissions, requestMicrophonePermission } from './permissions'
 import { openHomeWindow, openAboutWindow } from './tray'
 import { setLastTranscription, updateTrayState } from './tray'
-import { updateShortcuts, pauseHotkey, resumeHotkey } from './hotkeys'
+import { updateShortcuts, registerMouseButton, pauseHotkey, resumeHotkey } from './hotkeys'
 import {
   searchHfModels,
   getHfModelFiles,
@@ -143,8 +143,8 @@ export function registerIpcHandlers(): void {
         let overlayWin = wins.find(w => w.getTitle() === 'Whisper Overlay')
         if (!overlayWin) {
           overlayWin = new BrowserWindow({
-            width: 360,
-            height: 52,
+            width: 240,
+            height: 32,
             show: false,
             frame: false,
             transparent: true,
@@ -152,7 +152,7 @@ export function registerIpcHandlers(): void {
             alwaysOnTop: true,
             skipTaskbar: true,
             focusable: false,
-            x: Math.round((screenWidth - 360) / 2),
+            x: Math.round((screenWidth - 240) / 2),
             y: 24,
             title: 'Whisper Overlay',
             webPreferences: {
@@ -201,13 +201,20 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(IPC.SET_SETTING, async (_event, key: keyof AppSettings, value: unknown): Promise<void> => {
     await setSetting(key, value as AppSettings[typeof key])
 
-    // Re-register global hotkey when shortcuts change
-    if (key === 'keyboardShortcuts') {
+    // Re-register shortcuts when keyboard or mouse shortcut settings change
+    if (key === 'keyboardShortcuts' || key === 'mouseButton') {
       const mainWin = BrowserWindow.getAllWindows().find(w => w.getTitle() === 'Whisper Dictation')
       if (mainWin) {
-        updateShortcuts(value as string[], () => {
-          mainWin.webContents.send(IPC.HOTKEY_TRIGGERED)
-        })
+        const updatedSettings = await getSettings()
+        if (updatedSettings.mouseButton != null) {
+          registerMouseButton(updatedSettings.mouseButton, () => {
+            mainWin.webContents.send(IPC.HOTKEY_TRIGGERED)
+          })
+        } else {
+          updateShortcuts(updatedSettings.keyboardShortcuts, () => {
+            mainWin.webContents.send(IPC.HOTKEY_TRIGGERED)
+          })
+        }
       }
     }
 
@@ -243,6 +250,7 @@ export function registerIpcHandlers(): void {
     try {
       await writeFile(audioPath, wavBuffer)
 
+      const transcribeStart = Date.now()
       const result = await transcribeAudio({
         audioPath,
         model,
@@ -256,17 +264,24 @@ export function registerIpcHandlers(): void {
           },
         },
       })
+      const transcriptionDurationMs = Date.now() - transcribeStart
 
       // Apply AI refinement if enabled
       let finalText = result.text
       let refinementSkipped = false
+      let refinementDurationMs: number | undefined
+      let refinementModel: string | undefined
       if (settings.refinementEnabled && settings.refinementModelPath) {
         try {
+          const refineStart = Date.now()
           finalText = await refineText(result.text, settings)
+          refinementDurationMs = Date.now() - refineStart
+          refinementModel = settings.refinementModelPath.split('/').pop()?.replace('.gguf', '') ?? undefined
           console.log('[IPC] Refinement result:', {
             original: result.text.substring(0, 60),
             refined: finalText.substring(0, 60),
             changed: finalText !== result.text,
+            durationMs: refinementDurationMs,
           })
         } catch (error) {
           console.warn('[IPC] Refinement failed, using original:', error)
@@ -279,15 +294,38 @@ export function registerIpcHandlers(): void {
         })
       }
 
+      // Apply custom dictionary replacements
+      const dictionary = settings.dictionary || []
+      if (dictionary.length > 0) {
+        const { applyDictionary } = await import('@shared/dictionary')
+        const beforeDict = finalText
+        finalText = applyDictionary(finalText, dictionary)
+        if (beforeDict !== finalText) {
+          console.log('[IPC] Dictionary applied:', { before: beforeDict.substring(0, 60), after: finalText.substring(0, 60) })
+        }
+      }
+
       // Send success result — include rawText (pre-refinement) separately from text (final)
       console.log('[IPC] Sending WHISPER_RESULT:', {
         text: finalText.substring(0, 60),
         rawText: result.text.substring(0, 60),
         areDifferent: finalText !== result.text,
+        transcriptionModel: model,
+        transcriptionDurationMs,
+        refinementModel,
+        refinementDurationMs,
       })
       BrowserWindow.getAllWindows().forEach((win) => {
         if (!win.isDestroyed()) {
-          win.webContents.send(IPC.WHISPER_RESULT, { ...result, text: finalText, rawText: result.text })
+          win.webContents.send(IPC.WHISPER_RESULT, {
+            ...result,
+            text: finalText,
+            rawText: result.text,
+            transcriptionModel: model,
+            transcriptionDurationMs,
+            refinementModel,
+            refinementDurationMs,
+          })
         }
       })
 

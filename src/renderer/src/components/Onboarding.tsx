@@ -90,7 +90,7 @@ export function Onboarding({ onComplete }: OnboardingProps): React.ReactElement 
             <div
               key={s}
               className={`h-2 rounded-full transition-all duration-300 ${
-                s <= step ? 'bg-accent w-8' : 'bg-stone-300 w-2'
+                s <= step ? 'bg-accent w-8' : 'bg-border-custom w-2'
               }`}
             />
           ))}
@@ -106,7 +106,7 @@ export function Onboarding({ onComplete }: OnboardingProps): React.ReactElement 
 
         {step === 1 && (
           <div className="text-center">
-            <div className="w-24 h-24 bg-gradient-to-br from-teal-500 to-teal-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl">
+            <div className="w-24 h-24 bg-accent rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-md">
               <svg className="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
               </svg>
@@ -238,7 +238,7 @@ export function Onboarding({ onComplete }: OnboardingProps): React.ReactElement 
                       w-full p-4 rounded-xl border-2 text-left transition-all relative
                       ${selectedModel === model
                         ? 'border-accent bg-accent-subtle'
-                        : 'border-border-custom bg-surface hover:border-stone-300'
+                        : 'border-border-custom bg-surface hover:border-border-hover'
                       }
                     `}
                   >
@@ -299,7 +299,7 @@ export function Onboarding({ onComplete }: OnboardingProps): React.ReactElement 
               ) : (
                 <button
                   disabled
-                  className="px-6 py-2.5 bg-stone-300 text-white font-medium rounded-lg cursor-not-allowed"
+                  className="px-6 py-2.5 bg-border-custom text-white font-medium rounded-lg cursor-not-allowed"
                 >
                   Downloading...
                 </button>

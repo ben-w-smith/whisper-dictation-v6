@@ -13,11 +13,11 @@ const INTENSITY_INFO: Record<RefinementIntensity, { name: string; description: s
 }
 
 const STATUS_LABELS: Record<LlamaServerStatus, { label: string; color: string }> = {
-  stopped: { label: 'Stopped', color: 'text-stone-400' },
-  starting: { label: 'Starting...', color: 'text-amber-500' },
-  ready: { label: 'Ready', color: 'text-green-600' },
-  error: { label: 'Error', color: 'text-red-500' },
-  crashed: { label: 'Crashed — check model file', color: 'text-red-600' },
+  stopped: { label: 'Stopped', color: 'text-text-muted' },
+  starting: { label: 'Starting...', color: 'text-warning' },
+  ready: { label: 'Ready', color: 'text-success' },
+  error: { label: 'Error', color: 'text-danger' },
+  crashed: { label: 'Crashed — check model file', color: 'text-danger' },
 }
 
 export function AIPage(): React.ReactElement {
@@ -214,7 +214,7 @@ export function AIPage(): React.ReactElement {
             <>
               {/* HF Token */}
               <section className="p-4 rounded-xl border border-border-custom bg-surface space-y-3">
-                <h3 className="text-sm font-medium uppercase tracking-wide text-text-secondary">
+                <h3 className="text-[15px] font-semibold text-text-primary">
                   Hugging Face Token
                 </h3>
                 <p className="text-xs text-text-secondary">
@@ -222,7 +222,7 @@ export function AIPage(): React.ReactElement {
                 </p>
                 {hfTokenSaved && !showTokenInput ? (
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-green-600 font-medium">Token saved</span>
+                    <span className="text-sm text-success font-medium">Token saved</span>
                     <button
                       onClick={() => setShowTokenInput(true)}
                       className="text-sm text-accent hover:text-accent-hover"
@@ -252,8 +252,8 @@ export function AIPage(): React.ReactElement {
               </section>
 
               {/* Curated models */}
-              <section>
-                <h3 className="text-sm font-medium uppercase tracking-wide text-text-secondary mb-4">
+              <section className="border-t border-border-custom pt-6">
+                <h3 className="text-[15px] font-semibold text-text-primary mb-4">
                   Recommended Models
                 </h3>
                 <div className="space-y-3">
@@ -292,7 +292,7 @@ export function AIPage(): React.ReactElement {
                                 <span>Downloading</span>
                                 <span>{progress}%</span>
                               </div>
-                              <div className="h-2 bg-stone-200 rounded-full overflow-hidden">
+                              <div className="h-2 bg-border-custom rounded-full overflow-hidden">
                                 <div
                                   className="h-full bg-accent transition-all duration-300"
                                   style={{ width: `${progress}%` }}
@@ -300,7 +300,7 @@ export function AIPage(): React.ReactElement {
                               </div>
                             </div>
                           ) : downloaded ? (
-                            <span className="ml-4 flex items-center gap-1 text-sm text-green-600">
+                            <span className="ml-4 flex items-center gap-1 text-sm text-success">
                               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                               </svg>
@@ -322,10 +322,10 @@ export function AIPage(): React.ReactElement {
               </section>
 
               {/* Search */}
-              <section>
+              <section className="border-t border-border-custom pt-6">
                 <button
                   onClick={() => setSearchExpanded(!searchExpanded)}
-                  className="flex items-center gap-2 text-sm font-medium uppercase tracking-wide text-text-secondary hover:text-text-primary transition-colors w-full"
+                  className="flex items-center gap-2 text-[15px] font-semibold text-text-primary hover:text-text-primary transition-colors w-full"
                 >
                   <svg
                     className={`w-4 h-4 transition-transform ${searchExpanded ? 'rotate-90' : ''}`}
@@ -391,7 +391,7 @@ export function AIPage(): React.ReactElement {
                                           {file}
                                         </span>
                                         {dl ? (
-                                          <span className="text-xs text-green-600 flex-shrink-0">Downloaded</span>
+                                          <span className="text-xs text-success flex-shrink-0">Downloaded</span>
                                         ) : (
                                           <button
                                             onClick={() => handleDownloadSearch(result.id, file)}
@@ -419,7 +419,7 @@ export function AIPage(): React.ReactElement {
 
           {source === 'manual' && (
             <section>
-              <h3 className="text-sm font-medium uppercase tracking-wide text-text-secondary mb-2">
+              <h3 className="text-[15px] font-semibold text-text-primary mb-2">
                 Model File (GGUF)
               </h3>
               <p className="text-xs text-text-secondary mb-3">
@@ -445,8 +445,8 @@ export function AIPage(): React.ReactElement {
           </section>
 
           {/* Intensity */}
-          <section>
-            <h3 className="text-sm font-medium uppercase tracking-wide text-text-secondary mb-4">
+          <section className="border-t border-border-custom pt-6">
+            <h3 className="text-[15px] font-semibold text-text-primary mb-4">
               Intensity
             </h3>
             <div className="space-y-3">
@@ -459,7 +459,7 @@ export function AIPage(): React.ReactElement {
                     onClick={() => updateSetting('refinementIntensity', intensity)}
                     className={`
                       w-full p-4 rounded-xl border-2 text-left transition-all
-                      ${isSelected ? 'border-accent bg-accent-subtle' : 'border-border-custom bg-surface hover:border-stone-300'}
+                      ${isSelected ? 'border-accent bg-accent-subtle' : 'border-border-custom bg-surface hover:border-border-hover'}
                     `}
                   >
                     <div className="font-medium text-text-primary">{info.name}</div>

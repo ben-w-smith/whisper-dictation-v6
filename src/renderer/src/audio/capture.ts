@@ -22,8 +22,8 @@ export class AudioCapture {
   private isRecording: boolean = false
   private currentLevels: number[] = []
   private smoothedLevels: number[] = []
-  private levelBufferSize: number = 50
-  private smoothingFactor: number = 0.3
+  private levelBufferSize: number = 16
+  private smoothingFactor: number = 0.4
   private actualSampleRate: number = AUDIO_SAMPLE_RATE
   private mockInterval: ReturnType<typeof setInterval> | null = null
 
@@ -90,7 +90,24 @@ export class AudioCapture {
         },
       }
 
-      this.mediaStream = await navigator.mediaDevices.getUserMedia(constraints)
+      try {
+        this.mediaStream = await navigator.mediaDevices.getUserMedia(constraints)
+      } catch (constraintError) {
+        // If the specific device ID is stale/unavailable, fall back to system default
+        if (deviceId && constraintError instanceof Error && constraintError.name === 'OverconstrainedError') {
+          console.warn('[Audio] Device ID not found, falling back to system default:', deviceId.slice(0, 8))
+          const fallbackConstraints: MediaStreamConstraints = {
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true,
+            },
+          }
+          this.mediaStream = await navigator.mediaDevices.getUserMedia(fallbackConstraints)
+        } else {
+          throw constraintError
+        }
+      }
 
       // Log which device we're actually capturing from
       const track = this.mediaStream.getAudioTracks()[0]

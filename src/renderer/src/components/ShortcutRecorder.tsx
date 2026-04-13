@@ -139,8 +139,8 @@ export function ShortcutRecorder({
         className={`
           px-3 py-2 rounded-lg border-2 text-sm font-mono transition-all duration-200
           ${isRecording
-            ? 'border-teal-500 bg-teal-50 text-teal-700 animate-pulse'
-            : 'border-stone-300 bg-white text-stone-700 hover:border-stone-400'
+            ? 'border-accent bg-accent-subtle text-accent-hover animate-pulse'
+            : 'border-stone-300 bg-surface text-text-primary hover:border-border-hover'
           }
           ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
           min-w-[200px] text-left
@@ -154,7 +154,7 @@ export function ShortcutRecorder({
           type="button"
           onClick={clearShortcut}
           disabled={disabled}
-          className="p-2 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-lg transition-colors"
+          className="p-2 text-text-muted hover:text-text-primary hover:bg-canvas rounded-lg transition-colors"
           aria-label="Clear shortcut"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

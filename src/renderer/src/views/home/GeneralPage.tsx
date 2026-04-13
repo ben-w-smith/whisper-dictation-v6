@@ -38,12 +38,25 @@ export function GeneralPage(): React.ReactElement {
     setMicPermission(granted ? 'granted' : 'denied')
   }, [])
 
-  const refreshMicrophones = useCallback(async () => {
+  const refreshMicrophones = useCallback(async (opts?: { hardRefresh?: boolean }) => {
     try {
-      const tempStream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      tempStream.getTracks().forEach(t => t.stop())
+      // Try enumerateDevices() WITHOUT activating the microphone hardware.
+      // In Electron with macOS TCC permissions already granted, this returns
+      // device labels without triggering an audio codec switch (which causes
+      // an audible glitch/pop, especially with AirPods).
+      let devices = await navigator.mediaDevices.enumerateDevices()
+      const hasLabels = devices.some(d => d.kind === 'audioinput' && d.label)
 
-      const devices = await navigator.mediaDevices.enumerateDevices()
+      // If labels are missing or this is an explicit hard refresh, activate
+      // the microphone via getUserMedia and re-enumerate. This ensures labels
+      // are populated on first run before permissions are sticky, and gives
+      // the refresh button a way to do a full re-scan.
+      if (!hasLabels || opts?.hardRefresh) {
+        const tempStream = await navigator.mediaDevices.getUserMedia({ audio: true })
+        tempStream.getTracks().forEach(t => t.stop())
+        devices = await navigator.mediaDevices.enumerateDevices()
+      }
+
       const audioInputs = devices
         .filter(d => d.kind === 'audioinput')
         .map(d => ({
@@ -69,7 +82,7 @@ export function GeneralPage(): React.ReactElement {
   return (
     <div className="space-y-6">
       <section>
-        <h3 className="text-sm font-medium uppercase tracking-wide text-text-secondary mb-4">Audio Input</h3>
+        <h3 className="text-[15px] font-semibold text-text-primary mb-4">Audio Input</h3>
 
         {micPermission === 'denied' && (
           <div className="flex items-start gap-3 p-3 mb-3 bg-red-50 border border-red-200 rounded-lg">
@@ -126,7 +139,8 @@ export function GeneralPage(): React.ReactElement {
               value={settings.microphoneDeviceId}
               onChange={(e) => updateSetting('microphoneDeviceId', e.target.value)}
               disabled={micPermission !== 'granted'}
-              className="bg-surface border border-stone-300 rounded-lg px-3 py-1.5 text-sm text-text-primary max-w-[200px] focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-surface border border-border-custom rounded-lg px-3 py-1.5 text-sm text-text-primary max-w-[200px] focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label="Select microphone"
             >
               <option value="">System Default</option>
               {microphones.map((mic) => (
@@ -136,9 +150,10 @@ export function GeneralPage(): React.ReactElement {
               ))}
             </select>
             <button
-              onClick={refreshMicrophones}
+              onClick={() => refreshMicrophones({ hardRefresh: true })}
               className="text-text-secondary hover:text-text-primary p-1 transition-colors"
               title="Refresh microphone list"
+              aria-label="Refresh microphone list"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -149,9 +164,9 @@ export function GeneralPage(): React.ReactElement {
       </section>
 
       <section>
-        <h3 className="text-sm font-medium uppercase tracking-wide text-text-secondary mb-4">Output</h3>
+        <h3 className="text-[15px] font-semibold text-text-primary mb-4">Output</h3>
         <div className="space-y-4">
-          <div className="flex items-center justify-between py-2">
+          <div className="flex items-center justify-between py-2 border-b border-border-custom last:border-b-0">
             <div>
               <div className="text-text-primary font-medium">Copy to clipboard</div>
               <div className="text-sm text-text-secondary">Copy transcribed text to clipboard</div>
@@ -161,7 +176,7 @@ export function GeneralPage(): React.ReactElement {
               onChange={(checked) => updateSetting('copyToClipboard', checked)}
             />
           </div>
-          <div className="flex items-center justify-between py-2">
+          <div className="flex items-center justify-between py-2 border-b border-border-custom last:border-b-0">
             <div>
               <div className="text-text-primary font-medium">Auto-paste</div>
               <div className="text-sm text-text-secondary">Automatically paste transcribed text</div>
@@ -171,7 +186,7 @@ export function GeneralPage(): React.ReactElement {
               onChange={(checked) => updateSetting('autoPaste', checked)}
             />
           </div>
-          <div className="flex items-center justify-between py-2">
+          <div className="flex items-center justify-between py-2 border-b border-border-custom last:border-b-0">
             <div>
               <div className="text-text-primary font-medium">Play sounds</div>
               <div className="text-sm text-text-secondary">Play sound effects when recording</div>
@@ -181,7 +196,7 @@ export function GeneralPage(): React.ReactElement {
               onChange={(checked) => updateSetting('playSounds', checked)}
             />
           </div>
-          <div className="flex items-center justify-between py-2">
+          <div className="flex items-center justify-between py-2 border-b border-border-custom last:border-b-0">
             <div>
               <div className="text-text-primary font-medium">Show overlay</div>
               <div className="text-sm text-text-secondary">Show floating recording indicator</div>
@@ -195,7 +210,7 @@ export function GeneralPage(): React.ReactElement {
       </section>
 
       <section>
-        <h3 className="text-sm font-medium uppercase tracking-wide text-text-secondary mb-4">Shortcuts</h3>
+        <h3 className="text-[15px] font-semibold text-text-primary mb-4">Shortcuts</h3>
         <div>
           <div className="text-sm text-text-secondary mb-3">
             Press your shortcut to start recording, press again to stop.
@@ -225,7 +240,7 @@ export function GeneralPage(): React.ReactElement {
                       const updated = settings.keyboardShortcuts.filter((_, i) => i !== index)
                       updateSetting('keyboardShortcuts', updated)
                     }}
-                    className="p-2 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-lg transition-colors"
+                    className="p-2 text-text-muted hover:text-text-primary hover:bg-canvas rounded-lg transition-colors"
                     aria-label="Remove shortcut"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -244,14 +259,6 @@ export function GeneralPage(): React.ReactElement {
               + Add Shortcut
             </button>
           </div>
-          {settings.mouseButton !== null && (
-            <div className="mt-2 flex items-center gap-1.5 text-xs text-amber-600">
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              Mouse button shortcuts require a native module (coming soon)
-            </div>
-          )}
         </div>
       </section>
     </div>
