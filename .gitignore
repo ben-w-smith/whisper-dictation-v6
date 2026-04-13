@@ -20,11 +20,8 @@ Thumbs.db
 bin/llama-server
 bin/*.dylib
 
-# Claude Code local state
-.claude/
-
-# Agent plans (local working state)
-.agent/
+# Claude Code worktrees (embedded git repos)
+.claude/worktrees/
 
 # IDE
 .idea/
