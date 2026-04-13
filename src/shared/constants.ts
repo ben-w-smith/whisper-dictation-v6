@@ -3,8 +3,7 @@ import type { AppSettings } from './types'
 // Default settings
 export const DEFAULT_SETTINGS: AppSettings = {
   localModel: 'base.en',
-  recordingMode: 'toggle',
-  keyboardShortcut: 'Command+Shift+D',
+  keyboardShortcuts: ['Command+Shift+D'],
   mouseButton: null,
   microphoneDeviceId: '',
   autoPaste: true,
@@ -36,17 +35,23 @@ export const LLAMA_CTX_SIZE = 4096
 export const COMPLETE_DISPLAY_MS = 500
 export const ERROR_DISPLAY_MS = 8000
 
-// Whimsical messages shown during transcription
-export const WHIMSICAL_MESSAGES = [
-  'Percolating your phonemes...',
-  'Consulting the whispering void...',
-  'Alphabetizing your utterances...',
-  'Decoding your vocal vibrations...',
-  'Translating syllables to script...',
-  'Assembling words with care...',
-  'Parsing your poetic pauses...',
-  'Weaving text from sound...',
-]
+// Overlay waveform gradient colors (left to right across 12 bars)
+export const WAVEFORM_GRADIENT = [
+  '#14b8a6', // teal-500
+  '#2dd4bf', // teal-400
+  '#5eead4', // teal-300
+  '#6ee7b7', // emerald-300
+  '#a78bfa', // violet-400
+  '#8b5cf6', // violet-500
+  '#7c3aed', // violet-600
+  '#a855f7', // purple-500
+  '#c084fc', // purple-400
+  '#d946ef', // fuchsia-500
+  '#e879f9', // fuchsia-400
+  '#ec4899', // pink-500
+] as const
+
+export const WAVEFORM_BAR_COUNT = 12
 
 // Design tokens
 export const DESIGN_TOKENS = {

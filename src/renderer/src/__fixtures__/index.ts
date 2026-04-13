@@ -1,4 +1,4 @@
-export { defaultSettings, refinementEnabledSettings, pushToTalkSettings } from './settings'
+export { defaultSettings, refinementEnabledSettings, multiShortcutSettings } from './settings'
 export { emptyHistory, populatedHistory } from './transcriptions'
 export {
   recordingState,

@@ -1,5 +1,4 @@
 export type LocalModel = 'tiny.en' | 'base.en' | 'small.en' | 'medium.en' | 'large-v3'
-export type RecordingMode = 'push-to-talk' | 'toggle'
 export type RefinementIntensity = 'light' | 'medium' | 'heavy'
 export type LlamaServerStatus = 'stopped' | 'starting' | 'ready' | 'error' | 'crashed'
 
@@ -9,8 +8,7 @@ export interface AppSettings {
   localModel: LocalModel
 
   // Hotkey
-  recordingMode: RecordingMode
-  keyboardShortcut: string
+  keyboardShortcuts: string[]
   mouseButton: number | null
 
   // Audio input
@@ -63,6 +61,7 @@ export type PipelineState = 'idle' | 'recording' | 'transcribing' | 'complete' |
 export type PipelineEvent =
   | { type: 'HOTKEY_PRESSED' }
   | { type: 'STOP' }
+  | { type: 'CANCEL' }
   | { type: 'AUDIO_DATA'; levels: number[]; durationMs: number }
   | { type: 'AUDIO_BUFFER_READY'; buffer: Float32Array }
   | { type: 'TRANSCRIPTION_SUCCESS'; text: string; rawText: string }
@@ -110,5 +109,4 @@ export interface OverlayState {
   audioLevels: number[]
   transcriptionText: string
   errorMessage: string
-  whimsicalMessage: string
 }

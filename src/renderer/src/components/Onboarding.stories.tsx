@@ -9,8 +9,7 @@ const mockApi = {
       case 'settings:get':
         return {
           localModel: 'base.en',
-          recordingMode: 'toggle',
-          keyboardShortcut: 'Command+Shift+D',
+          keyboardShortcuts: ['Command+Shift+D'],
           mouseButton: null,
         }
       case 'model:download':

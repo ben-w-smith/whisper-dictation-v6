@@ -1,7 +1,7 @@
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import type { ActorStateFrom } from 'xstate'
 import type { PipelineMachine } from '@renderer/state'
-import { WHIMSICAL_MESSAGES } from '@shared/constants'
+import { WAVEFORM_GRADIENT, WAVEFORM_BAR_COUNT } from '@shared/constants'
 
 interface OverlayProps {
   state: ActorStateFrom<PipelineMachine>
@@ -10,9 +10,37 @@ interface OverlayProps {
 }
 
 export function Overlay({ state, elapsedMs: externalElapsedMs, send }: OverlayProps): React.ReactElement | null {
-  const [whimsicalIndex, setWhimsicalIndex] = useState(0)
   const { audioLevels } = state.context
   const elapsedMs = externalElapsedMs ?? state.context.elapsedMs
+  const barsRef = useRef<(HTMLDivElement | null)[]>([])
+  const rafRef = useRef<number>(0)
+  const levelsRef = useRef<number[]>(audioLevels)
+
+  // Keep ref in sync
+  levelsRef.current = audioLevels
+
+  // rAF loop for waveform bars
+  useEffect(() => {
+    const tick = () => {
+      const levels = levelsRef.current
+      const bars = barsRef.current
+      for (let i = 0; i < WAVEFORM_BAR_COUNT; i++) {
+        const bar = bars[i]
+        if (!bar) continue
+        const levelIndex = Math.floor((i / WAVEFORM_BAR_COUNT) * levels.length)
+        const level = levels[levelIndex] ?? 0
+        const height = Math.max(3, Math.min(24, level * 240))
+        bar.style.height = `${height}px`
+      }
+      rafRef.current = requestAnimationFrame(tick)
+    }
+    rafRef.current = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(rafRef.current)
+  }, [])
+
+  const handleCancel = useCallback(() => {
+    send({ type: 'CANCEL' })
+  }, [send])
 
   const handleClick = useCallback(() => {
     if (state.matches('complete')) {
@@ -22,91 +50,78 @@ export function Overlay({ state, elapsedMs: externalElapsedMs, send }: OverlayPr
     }
   }, [state, send])
 
-  useEffect(() => {
-    if (state.matches('transcribing')) {
-      const interval = setInterval(() => {
-        setWhimsicalIndex((prev) => (prev + 1) % WHIMSICAL_MESSAGES.length)
-      }, 3000)
-      return () => clearInterval(interval)
-    }
-  }, [state.value])
-
   if (state.matches('idle')) {
     return null
-  }
-
-  const elapsedSeconds = Math.floor(elapsedMs / 1000)
-  const elapsedFormatted = `${Math.floor(elapsedSeconds / 60)}:${String(elapsedSeconds % 60).padStart(2, '0')}`
-
-  const renderRecordingState = () => (
-    <>
-      <div className="flex items-center gap-2">
-        <div className="relative w-3 h-3 overflow-hidden">
-          <div className="absolute inset-0 bg-red-500 rounded-full animate-ping" />
-          <div className="absolute inset-0 bg-red-500 rounded-full" />
-        </div>
-        <span className="text-white/90 font-medium tabular-nums">{elapsedFormatted}</span>
-      </div>
-      <div className="flex items-end gap-0.5 h-4">
-        {[...Array(5)].map((_, i) => {
-          const level = audioLevels[i] ?? 0
-          const height = Math.max(4, Math.min(16, level * 160))
-          return (
-            <div
-              key={i}
-              className="w-1 bg-red-400 rounded-full transition-all duration-75"
-              style={{ height: `${height}px` }}
-            />
-          )
-        })}
-      </div>
-    </>
-  )
-
-  const renderTranscribingState = () => (
-    <div className="flex items-center gap-2">
-      <svg className="w-4 h-4 text-blue-400 animate-spin" fill="none" viewBox="0 0 24 24">
-        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-      </svg>
-      <span className="text-white/90 text-sm">{WHIMSICAL_MESSAGES[whimsicalIndex]}</span>
-    </div>
-  )
-
-  const renderCompleteState = () => (
-    <div className="flex items-center gap-2">
-      <svg className="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-      </svg>
-      <span className="text-white/90 font-medium">Copied</span>
-    </div>
-  )
-
-  const renderErrorState = () => {
-    const errorMessage = state.context.error?.message ?? 'An error occurred'
-    return (
-      <div className="flex items-center gap-2">
-        <svg className="w-5 h-5 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-        </svg>
-        <span className="text-white/90 text-sm">{errorMessage}</span>
-      </div>
-    )
   }
 
   return (
     <div
       className={`h-full flex items-center justify-center ${
-        state.matches('complete') || state.matches('error') ? 'cursor-pointer' : 'pointer-events-none'
+        state.matches('complete') || state.matches('error') ? 'cursor-pointer' : ''
       }`}
       onClick={handleClick}
     >
-      <div className="bg-stone-900/85 backdrop-blur-xl rounded-full px-5 py-3 shadow-2xl border border-white/10 w-full">
-        <div className="flex items-center justify-between">
-          {state.matches('recording') && renderRecordingState()}
-          {state.matches('transcribing') && renderTranscribingState()}
-          {state.matches('complete') && renderCompleteState()}
-          {state.matches('error') && renderErrorState()}
+      <div className="bg-stone-900/85 backdrop-blur-xl rounded-full px-3 py-2.5 shadow-2xl border border-white/10 w-full">
+        <div className="flex items-center justify-between gap-2">
+          {state.matches('recording') && (
+            <>
+              {/* Cancel button */}
+              <button
+                onClick={(e) => { e.stopPropagation(); handleCancel() }}
+                className="shrink-0 w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+              >
+                <svg className="w-3.5 h-3.5 text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+
+              {/* Waveform bars */}
+              <div className="flex-1 flex items-center justify-center gap-[3px] h-7">
+                {[...Array(WAVEFORM_BAR_COUNT)].map((_, i) => (
+                  <div
+                    key={i}
+                    ref={(el) => { barsRef.current[i] = el }}
+                    className="w-[2px] rounded-full transition-none"
+                    style={{
+                      backgroundColor: WAVEFORM_GRADIENT[i],
+                      height: '3px',
+                    }}
+                  />
+                ))}
+              </div>
+
+              {/* Stop button */}
+              <button
+                onClick={(e) => { e.stopPropagation(); send({ type: 'HOTKEY_PRESSED' }) }}
+                className="shrink-0 w-7 h-7 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center transition-colors"
+              >
+                <div className="w-2.5 h-2.5 rounded-sm bg-white" />
+              </button>
+            </>
+          )}
+
+          {state.matches('transcribing') && (
+            <div className="flex-1 flex items-center justify-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+            </div>
+          )}
+
+          {state.matches('complete') && (
+            <div className="flex-1 flex items-center justify-center gap-2">
+              <svg className="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+          )}
+
+          {state.matches('error') && (
+            <div className="flex items-center gap-2 w-full px-1">
+              <svg className="w-4 h-4 text-orange-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <span className="text-white/90 text-xs">{state.context.error?.message ?? 'Error'}</span>
+            </div>
+          )}
         </div>
       </div>
     </div>

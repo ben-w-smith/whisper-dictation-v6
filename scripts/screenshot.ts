@@ -1,14 +1,16 @@
 import { _electron as electron } from '@playwright/test'
-import { join } from 'path'
+import { join, dirname } from 'path'
+import { fileURLToPath } from 'url'
 import { mkdirSync } from 'fs'
 
-const SCREENSHOT_DIR = join(import.meta.dirname, '..', 'screenshots', 'current')
+const __dirname = dirname(fileURLToPath(import.meta.url))
+const SCREENSHOT_DIR = join(__dirname, '..', 'screenshots', 'current')
 
 async function main() {
   mkdirSync(SCREENSHOT_DIR, { recursive: true })
 
   const app = await electron.launch({
-    args: [join(import.meta.dirname, '..')],
+    args: [join(__dirname, '..')],
     env: {
       ...process.env,
       ELECTRON_RENDERER_URL: undefined,

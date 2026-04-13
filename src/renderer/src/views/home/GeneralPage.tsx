@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { ToggleSwitch } from '../../components/ToggleSwitch'
 import { ShortcutRecorder } from '../../components/ShortcutRecorder'
-import type { AppSettings, RecordingMode } from '@shared/types'
+import type { AppSettings } from '@shared/types'
 import { DEFAULT_SETTINGS } from '@shared/constants'
 import { IPC } from '@shared/ipc'
 
@@ -14,7 +14,6 @@ type MicPermission = 'granted' | 'denied' | 'prompt' | 'checking'
 
 export function GeneralPage(): React.ReactElement {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS)
-  const [recordingMode, setRecordingMode] = useState<RecordingMode>(DEFAULT_SETTINGS.recordingMode)
   const [microphones, setMicrophones] = useState<AudioDevice[]>([])
   const [micPermission, setMicPermission] = useState<MicPermission>('checking')
 
@@ -22,7 +21,6 @@ export function GeneralPage(): React.ReactElement {
     const loadSettings = async () => {
       const loaded = await window.api.invoke(IPC.GET_SETTINGS) as AppSettings
       setSettings(loaded)
-      setRecordingMode(loaded.recordingMode)
     }
     loadSettings()
     checkMicPermission()
@@ -42,7 +40,6 @@ export function GeneralPage(): React.ReactElement {
 
   const refreshMicrophones = useCallback(async () => {
     try {
-      // Request temporary access to get device labels
       const tempStream = await navigator.mediaDevices.getUserMedia({ audio: true })
       tempStream.getTracks().forEach(t => t.stop())
 
@@ -60,7 +57,6 @@ export function GeneralPage(): React.ReactElement {
     }
   }, [])
 
-  // Enumerate microphones on mount
   useEffect(() => {
     refreshMicrophones()
   }, [refreshMicrophones])
@@ -75,7 +71,6 @@ export function GeneralPage(): React.ReactElement {
       <section>
         <h3 className="text-sm font-medium uppercase tracking-wide text-text-secondary mb-4">Audio Input</h3>
 
-        {/* Permission status banner */}
         {micPermission === 'denied' && (
           <div className="flex items-start gap-3 p-3 mb-3 bg-red-50 border border-red-200 rounded-lg">
             <svg className="w-5 h-5 text-red-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -200,46 +195,63 @@ export function GeneralPage(): React.ReactElement {
       </section>
 
       <section>
-        <h3 className="text-sm font-medium uppercase tracking-wide text-text-secondary mb-4">Recording Mode</h3>
-        <div className="grid grid-cols-2 gap-3">
-          {(['push-to-talk', 'toggle'] as RecordingMode[]).map((mode) => (
-            <button
-              key={mode}
-              onClick={() => {
-                setRecordingMode(mode)
-                updateSetting('recordingMode', mode)
-              }}
-              className={`
-                p-4 rounded-xl border-2 text-left transition-all
-                ${recordingMode === mode
-                  ? 'border-accent bg-accent-subtle'
-                  : 'border-border-custom bg-surface hover:border-stone-300'
-                }
-              `}
-            >
-              <div className="font-medium text-text-primary capitalize">{mode.replace('-', ' ')}</div>
-              <div className="text-sm text-text-secondary mt-1">
-                {mode === 'push-to-talk' ? 'Hold hotkey while speaking' : 'Press hotkey to start/stop'}
-              </div>
-            </button>
-          ))}
-        </div>
-      </section>
-
-      <section>
-        <h3 className="text-sm font-medium uppercase tracking-wide text-text-secondary mb-4">Shortcut</h3>
+        <h3 className="text-sm font-medium uppercase tracking-wide text-text-secondary mb-4">Shortcuts</h3>
         <div>
-          <div className="text-sm text-text-secondary mb-2">
-            Press your hotkey or mouse button to start recording
+          <div className="text-sm text-text-secondary mb-3">
+            Press your shortcut to start recording, press again to stop.
           </div>
-          <ShortcutRecorder
-            value={settings.keyboardShortcut}
-            mouseButton={settings.mouseButton}
-            onChange={(keyboard, mouse) => {
-              updateSetting('keyboardShortcut', keyboard ?? DEFAULT_SETTINGS.keyboardShortcut)
-              updateSetting('mouseButton', mouse)
-            }}
-          />
+          <div className="space-y-2">
+            {(settings.keyboardShortcuts ?? []).map((shortcut, index) => (
+              <div key={index} className="flex items-center gap-2">
+                <ShortcutRecorder
+                  value={shortcut}
+                  mouseButton={index === 0 ? settings.mouseButton : null}
+                  onChange={(keyboard, mouse) => {
+                    const updated = [...settings.keyboardShortcuts]
+                    if (keyboard) {
+                      updated[index] = keyboard
+                    } else {
+                      updated.splice(index, 1)
+                    }
+                    updateSetting('keyboardShortcuts', updated.length > 0 ? updated : DEFAULT_SETTINGS.keyboardShortcuts)
+                    if (index === 0 && mouse !== undefined) {
+                      updateSetting('mouseButton', mouse)
+                    }
+                  }}
+                />
+                {(settings.keyboardShortcuts ?? []).length > 1 && (
+                  <button
+                    onClick={() => {
+                      const updated = settings.keyboardShortcuts.filter((_, i) => i !== index)
+                      updateSetting('keyboardShortcuts', updated)
+                    }}
+                    className="p-2 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-lg transition-colors"
+                    aria-label="Remove shortcut"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+            ))}
+            <button
+              onClick={() => {
+                updateSetting('keyboardShortcuts', [...settings.keyboardShortcuts, ''])
+              }}
+              className="text-sm text-accent hover:text-accent-hover font-medium transition-colors"
+            >
+              + Add Shortcut
+            </button>
+          </div>
+          {settings.mouseButton !== null && (
+            <div className="mt-2 flex items-center gap-1.5 text-xs text-amber-600">
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Mouse button shortcuts require a native module (coming soon)
+            </div>
+          )}
         </div>
       </section>
     </div>

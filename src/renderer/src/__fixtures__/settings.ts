@@ -2,8 +2,7 @@ import type { AppSettings } from '@shared/types'
 
 export const defaultSettings: AppSettings = {
   localModel: 'base.en',
-  recordingMode: 'toggle',
-  keyboardShortcut: 'Command+Shift+D',
+  keyboardShortcuts: ['Command+Shift+D'],
   mouseButton: null,
   microphoneDeviceId: '',
   autoPaste: true,
@@ -23,9 +22,7 @@ export const refinementEnabledSettings: AppSettings = {
   refinementIntensity: 'medium',
 }
 
-export const pushToTalkSettings: AppSettings = {
+export const multiShortcutSettings: AppSettings = {
   ...defaultSettings,
-  recordingMode: 'push-to-talk',
-  mouseButton: 3,
-  keyboardShortcut: null,
+  keyboardShortcuts: ['Command+Shift+D', 'Command+Shift+F'],
 }

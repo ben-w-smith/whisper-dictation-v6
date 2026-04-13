@@ -29,6 +29,30 @@ function createHistoryStore(): Store<{ entries: TranscriptionEntry[] }> {
   return store
 }
 
+/**
+ * Migrate legacy settings keys to current schema.
+ * Called once during store initialization.
+ */
+function migrateLegacySettings(store: Store<AppSettings>): void {
+  // Migrate keyboardShortcut (string) → keyboardShortcuts (string[])
+  const legacyShortcut = (store as unknown as Store<Record<string, unknown>>).get('keyboardShortcut')
+  if (typeof legacyShortcut === 'string') {
+    const current = store.get('keyboardShortcuts')
+    if (!current || !Array.isArray(current) || current.length === 0) {
+      store.set('keyboardShortcuts', [legacyShortcut])
+    }
+    // Remove legacy key
+    ;(store as unknown as Store<Record<string, unknown>>).delete('keyboardShortcut')
+    console.log('[Store] Migrated keyboardShortcut → keyboardShortcuts')
+  }
+
+  // Remove deprecated recordingMode key
+  if ('recordingMode' in (store as unknown as Store<Record<string, unknown>>).store) {
+    ;(store as unknown as Store<Record<string, unknown>>).delete('recordingMode')
+    console.log('[Store] Removed deprecated recordingMode')
+  }
+}
+
 // Singleton instances
 let settingsStore: Store<AppSettings> | null = null
 let historyStore: Store<{ entries: TranscriptionEntry[] }> | null = null
@@ -39,6 +63,7 @@ let historyStore: Store<{ entries: TranscriptionEntry[] }> | null = null
 function getSettingsStore(): Store<AppSettings> {
   if (!settingsStore) {
     settingsStore = createSettingsStore()
+    migrateLegacySettings(settingsStore)
   }
   return settingsStore
 }

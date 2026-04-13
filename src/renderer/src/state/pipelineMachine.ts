@@ -90,6 +90,7 @@ export const createPipelineMachine = () => {
           AUDIO_DATA: {
             actions: [{ type: 'updateAudioData' }]
           },
+          CANCEL: 'idle',
           HOTKEY_PRESSED: [
             {
               guard: 'recordingTooShort',

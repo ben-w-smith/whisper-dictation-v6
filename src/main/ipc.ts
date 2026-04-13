@@ -14,7 +14,7 @@ import { createError } from '@shared/errors'
 import { checkAllPermissions, requestMicrophonePermission } from './permissions'
 import { openHomeWindow, openAboutWindow } from './tray'
 import { setLastTranscription, updateTrayState } from './tray'
-import { updateShortcut, pauseHotkey, resumeHotkey } from './hotkeys'
+import { updateShortcuts, pauseHotkey, resumeHotkey } from './hotkeys'
 import type { AppSettings, TranscriptionEntry } from '@shared/types'
 import type { LocalModel } from '@shared/types'
 
@@ -63,6 +63,14 @@ export function registerIpcHandlers(): void {
     const bgWin = BrowserWindow.getAllWindows().find(w => w.getTitle() === 'Whisper Dictation')
     if (bgWin && !bgWin.isDestroyed()) {
       bgWin.webContents.send(IPC.OVERLAY_READY)
+    }
+  })
+
+  // Relay overlay cancel from overlay window to background window
+  ipcMain.on(IPC.OVERLAY_CANCEL, () => {
+    const bgWin = BrowserWindow.getAllWindows().find(w => w.getTitle() === 'Whisper Dictation')
+    if (bgWin && !bgWin.isDestroyed()) {
+      bgWin.webContents.send(IPC.OVERLAY_CANCEL)
     }
   })
 
@@ -115,16 +123,16 @@ export function registerIpcHandlers(): void {
         let overlayWin = wins.find(w => w.getTitle() === 'Whisper Overlay')
         if (!overlayWin) {
           overlayWin = new BrowserWindow({
-            width: 440,
-            height: 100,
-            show: true,
+            width: 360,
+            height: 52,
+            show: false,
             frame: false,
             transparent: true,
             resizable: false,
             alwaysOnTop: true,
             skipTaskbar: true,
             focusable: false,
-            x: Math.round((screenWidth - 440) / 2),
+            x: Math.round((screenWidth - 360) / 2),
             y: 24,
             title: 'Whisper Overlay',
             webPreferences: {
@@ -145,8 +153,12 @@ export function registerIpcHandlers(): void {
           overlayWin.on('page-title-updated', (e) => {
             e.preventDefault()
           })
+          // showInactive() prevents stealing focus from the user's active app
+          overlayWin.once('ready-to-show', () => {
+            overlayWin.showInactive()
+          })
         } else {
-          overlayWin.show()
+          overlayWin.showInactive()
         }
         break
       }
@@ -169,11 +181,11 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(IPC.SET_SETTING, async (_event, key: keyof AppSettings, value: unknown): Promise<void> => {
     await setSetting(key, value as AppSettings[typeof key])
 
-    // Re-register global hotkey when shortcut changes
-    if (key === 'keyboardShortcut') {
+    // Re-register global hotkey when shortcuts change
+    if (key === 'keyboardShortcuts') {
       const mainWin = BrowserWindow.getAllWindows().find(w => w.getTitle() === 'Whisper Dictation')
       if (mainWin) {
-        updateShortcut(value as string, () => {
+        updateShortcuts(value as string[], () => {
           mainWin.webContents.send(IPC.HOTKEY_TRIGGERED)
         })
       }

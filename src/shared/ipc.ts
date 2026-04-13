@@ -39,6 +39,7 @@ export const IPC = {
   // Overlay -> Main -> Background (relay through main process)
   OVERLAY_DISMISS: 'overlay:dismiss',
   OVERLAY_READY: 'overlay:ready',
+  OVERLAY_CANCEL: 'overlay:cancel',
 
   // Debug
   DEBUG_QUERY: 'debug:query',

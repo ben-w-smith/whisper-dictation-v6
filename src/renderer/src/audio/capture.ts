@@ -21,7 +21,9 @@ export class AudioCapture {
   private startTime: number = 0
   private isRecording: boolean = false
   private currentLevels: number[] = []
+  private smoothedLevels: number[] = []
   private levelBufferSize: number = 50
+  private smoothingFactor: number = 0.3
   private actualSampleRate: number = AUDIO_SAMPLE_RATE
   private mockInterval: ReturnType<typeof setInterval> | null = null
 
@@ -51,7 +53,11 @@ export class AudioCapture {
         }
         this.audioBuffers.push(mockBuffer)
         const rms = this.calculateRMS(mockBuffer)
-        this.currentLevels.push(rms)
+        const smoothed = this.smoothedLevels.length > 0
+          ? this.smoothingFactor * rms + (1 - this.smoothingFactor) * this.smoothedLevels[this.smoothedLevels.length - 1]
+          : rms
+        this.smoothedLevels.push(smoothed)
+        this.currentLevels.push(smoothed)
         if (this.currentLevels.length > this.levelBufferSize) {
           this.currentLevels.shift()
         }
@@ -139,9 +145,13 @@ export class AudioCapture {
       // Store the audio data
       this.audioBuffers.push(new Float32Array(inputData))
 
-      // Calculate RMS level for visualization
+      // Calculate RMS level for visualization with exponential smoothing
       const rms = this.calculateRMS(inputData)
-      this.currentLevels.push(rms)
+      const smoothed = this.smoothedLevels.length > 0
+        ? this.smoothingFactor * rms + (1 - this.smoothingFactor) * this.smoothedLevels[this.smoothedLevels.length - 1]
+        : rms
+      this.smoothedLevels.push(smoothed)
+      this.currentLevels.push(smoothed)
 
       // Keep only recent levels
       if (this.currentLevels.length > this.levelBufferSize) {
@@ -230,6 +240,7 @@ export class AudioCapture {
     // Clear buffers
     this.audioBuffers = []
     this.currentLevels = []
+    this.smoothedLevels = []
 
     return {
       samples,
@@ -287,6 +298,7 @@ export class AudioCapture {
     }
     this.audioBuffers = []
     this.currentLevels = []
+    this.smoothedLevels = []
   }
 
   /**
@@ -307,6 +319,7 @@ export class AudioCapture {
     }
     this.audioBuffers = []
     this.currentLevels = []
+    this.smoothedLevels = []
   }
 
   /**
