@@ -6,10 +6,22 @@ export function HistoryPage(): React.ReactElement {
   const [history, setHistory] = useState<TranscriptionEntry[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [showClearConfirm, setShowClearConfirm] = useState(false)
+  const [showingRaw, setShowingRaw] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     const loadHistory = async () => {
       const loaded = await window.api.invoke(IPC.GET_HISTORY) as TranscriptionEntry[]
+      // Debug: log first few entries to check rawText
+      loaded.slice(0, 3).forEach((e) => {
+        console.log('[HistoryPage] Entry:', {
+          id: e.id.substring(0, 8),
+          text: e.text?.substring(0, 40),
+          rawText: e.rawText?.substring(0, 40),
+          hasRawText: !!e.rawText,
+          areDifferent: e.rawText !== e.text,
+          refinedWith: e.refinedWith,
+        })
+      })
       setHistory(loaded.sort((a, b) => b.timestamp - a.timestamp))
     }
     loadHistory()
@@ -130,24 +142,36 @@ export function HistoryPage(): React.ReactElement {
         <div className="space-y-2">
           {filteredHistory.map((entry) => {
             const providerBadge = getProviderBadge(entry.transcriptionProvider)
+            const isShowingRaw = showingRaw.has(entry.id)
+            const hasRefinement = entry.rawText && entry.rawText !== entry.text
+            const displayText = isShowingRaw ? entry.rawText : entry.text
 
             return (
               <div
                 key={entry.id}
-                className="p-4 rounded-xl border border-border-custom bg-surface hover:border-stone-300 transition-colors group"
+                className={`p-4 rounded-xl border transition-colors group ${
+                  isShowingRaw
+                    ? 'border-amber-200 bg-amber-50/50'
+                    : 'border-border-custom bg-surface hover:border-stone-300'
+                }`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <p className="text-text-primary line-clamp-2 leading-relaxed">
-                      {entry.text}
+                      {displayText}
                     </p>
                     <div className="flex items-center gap-2 mt-2">
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${providerBadge.className}`}>
                         {providerBadge.label}
                       </span>
-                      {entry.refinedWith && (
+                      {hasRefinement && !isShowingRaw && (
                         <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-purple-100 text-purple-700">
                           Refined
+                        </span>
+                      )}
+                      {isShowingRaw && (
+                        <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700">
+                          Original
                         </span>
                       )}
                       <span className="text-xs text-text-muted">
@@ -158,15 +182,46 @@ export function HistoryPage(): React.ReactElement {
                       </span>
                     </div>
                   </div>
-                  <button
-                    onClick={() => copyToClipboard(entry.text)}
-                    className="p-2 text-text-muted hover:text-accent hover:bg-accent-subtle rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                    title="Copy to clipboard"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
-                  </button>
+                  <div className="flex items-center gap-1">
+                    {hasRefinement && (
+                      <button
+                        onClick={() => {
+                          setShowingRaw((prev) => {
+                            const next = new Set(prev)
+                            if (next.has(entry.id)) {
+                              next.delete(entry.id)
+                            } else {
+                              next.add(entry.id)
+                            }
+                            return next
+                          })
+                        }}
+                        className={`p-2 rounded-lg transition-colors ${
+                          isShowingRaw
+                            ? 'text-amber-600 bg-amber-100'
+                            : 'text-text-muted hover:text-amber-600 hover:bg-amber-50 opacity-0 group-hover:opacity-100'
+                        }`}
+                        title={isShowingRaw ? 'Show refined text' : 'Show original transcription'}
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          {isShowingRaw ? (
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          ) : (
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                          )}
+                        </svg>
+                      </button>
+                    )}
+                    <button
+                      onClick={() => copyToClipboard(displayText)}
+                      className="p-2 text-text-muted hover:text-accent hover:bg-accent-subtle rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                      title="Copy to clipboard"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
               </div>
             )

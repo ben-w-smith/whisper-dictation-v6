@@ -51,6 +51,16 @@ function migrateLegacySettings(store: Store<AppSettings>): void {
     ;(store as unknown as Store<Record<string, unknown>>).delete('recordingMode')
     console.log('[Store] Removed deprecated recordingMode')
   }
+
+  // Migrate: if user already has a manual refinementModelPath, preserve it
+  const existingModelPath = store.get('refinementModelPath')
+  if (existingModelPath && typeof existingModelPath === 'string' && existingModelPath.length > 0) {
+    const raw = (store as unknown as Store<Record<string, unknown>>).store
+    if (!('refinementModelSource' in raw) || raw.refinementModelSource === undefined) {
+      store.set('refinementModelSource', 'manual')
+      console.log('[Store] Set refinementModelSource to manual (existing path found)')
+    }
+  }
 }
 
 // Singleton instances
@@ -282,6 +292,7 @@ const KEYTAR_SERVICES = {
   openai: 'whisper-dictation-openai',
   google: 'whisper-dictation-google',
   anthropic: 'whisper-dictation-anthropic',
+  huggingface: 'whisper-dictation-huggingface',
 } as const
 const KEYTAR_ACCOUNT = 'default'
 

@@ -11,6 +11,15 @@ import { registerIpcHandlers, setTrayRef } from './ipc'
 import { getSettings } from './store'
 import { requestMicrophonePermission } from './permissions'
 import { startLlamaServer, stopLlamaServer, registerPowerMonitor } from './llama'
+import { getGgufModelPath } from './huggingface'
+
+/** Resolve gguf:// paths to absolute filesystem paths. */
+function resolveModelPath(path: string): string {
+  if (path.startsWith('gguf://')) {
+    return getGgufModelPath(path.slice(7))
+  }
+  return path
+}
 
 // Allow AudioContext to start without user gesture — required because recording
 // is triggered by a global hotkey (via IPC), not a direct click in the renderer.
@@ -142,7 +151,7 @@ app.whenReady().then(() => {
   // Start llama-server if refinement is configured
   getSettings().then((settings) => {
     if (settings.refinementEnabled && settings.refinementModelPath) {
-      startLlamaServer(settings.refinementModelPath).catch((err) => {
+      startLlamaServer(resolveModelPath(settings.refinementModelPath)).catch((err) => {
         console.error('[App] Failed to start llama-server:', err)
       })
     }

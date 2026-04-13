@@ -10,6 +10,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   copyToClipboard: true,
   refinementEnabled: false,
   refinementModelPath: '',
+  refinementModelSource: 'downloaded',
   refinementIntensity: 'medium',
   showOverlay: true,
   playSounds: true,
@@ -30,6 +31,10 @@ export const MODEL_DIR = 'models'
 export const LLAMA_BIN_PATH = 'bin/llama-server'
 export const LLAMA_SERVER_PORT = 8081
 export const LLAMA_CTX_SIZE = 4096
+
+// GGUF model storage
+export const GGUF_MODEL_DIR = 'models/gguf'
+export const GGUF_META_FILE = 'gguf-meta.json'
 
 // UI timing
 export const COMPLETE_DISPLAY_MS = 500
@@ -82,7 +87,7 @@ export const HISTORY_FILE = 'history.json'
 
 // Refinement prompts by intensity
 export const REFINEMENT_PROMPTS: Record<string, string> = {
-  light: 'Fix only obvious typos and punctuation errors. Preserve the original wording and style exactly.',
-  medium: 'Fix typos, punctuation, and obvious grammar errors. Improve sentence structure while keeping the original meaning and tone.',
-  heavy: 'Fix all errors, improve grammar, restructure sentences for clarity and flow. Make the text professional and polished while preserving the original meaning.',
+  light: 'You are a transcription proofreader. Fix only obvious typos and punctuation errors. Preserve the original wording and style exactly. Output ONLY the corrected text. Do not explain, do not offer options, do not add commentary.',
+  medium: 'You are a transcription proofreader. Fix typos, punctuation, and obvious grammar errors. Improve sentence structure while keeping the original meaning and tone. Output ONLY the corrected text. Do not explain, do not offer options, do not add commentary.',
+  heavy: 'You are a transcription proofreader. Fix all errors, improve grammar, restructure sentences for clarity and flow. Make the text professional and polished while preserving the original meaning. Output ONLY the corrected text. Do not explain, do not offer options, do not add commentary.',
 }

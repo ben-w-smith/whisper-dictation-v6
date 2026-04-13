@@ -21,6 +21,7 @@ export interface AppSettings {
   // AI Refinement
   refinementEnabled: boolean
   refinementModelPath: string
+  refinementModelSource: 'manual' | 'downloaded'
   refinementIntensity: RefinementIntensity
 
   // UI

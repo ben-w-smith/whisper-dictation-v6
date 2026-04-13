@@ -328,6 +328,11 @@ function DictationApp(): React.ReactElement {
 
     const unsubResult = window.api.on(IPC.WHISPER_RESULT, (result: unknown) => {
       const r = result as { text: string; rawText?: string }
+      console.log('[DictationApp] WHISPER_RESULT received:', {
+        text: r.text?.substring(0, 60),
+        rawText: r.rawText?.substring(0, 60),
+        areDifferent: r.text !== r.rawText,
+      })
       debugBus.current.push('whisper', 'result', { text: r.text, rawText: r.rawText })
       send({
         type: 'TRANSCRIPTION_SUCCESS',
@@ -506,6 +511,11 @@ function DictationApp(): React.ReactElement {
       }
 
       const text = state.context.transcriptionText
+      console.log('[DictationApp] Complete state:', {
+        text: text?.substring(0, 60),
+        rawText: state.context.rawTranscriptionText?.substring(0, 60),
+        areDifferent: text !== state.context.rawTranscriptionText,
+      })
       if (text) {
         if (settings.copyToClipboard) {
           window.api.invoke(IPC.WRITE_CLIPBOARD, text).catch(console.error)
@@ -519,6 +529,7 @@ function DictationApp(): React.ReactElement {
           id: crypto.randomUUID(),
           text,
           rawText: state.context.rawTranscriptionText,
+          refinedWith: text !== state.context.rawTranscriptionText ? 'local-llm' : undefined,
           audioDurationMs: state.context.audioDurationMs,
           transcriptionProvider: 'local',
           timestamp: Date.now(),

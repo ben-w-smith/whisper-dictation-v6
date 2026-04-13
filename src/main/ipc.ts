@@ -9,12 +9,32 @@ import { IPC } from '@shared/ipc'
 import { transcribeAudio, isModelDownloaded, getDownloadedModels, setMockTranscriptionResult } from './whisper'
 import { refineText } from './refine'
 import { writeToClipboard, autoPaste } from './clipboard'
-import { getSettings, setSetting, getHistory, saveHistoryEntry, clearHistory } from './store'
+import { getSettings, setSetting, getHistory, saveHistoryEntry, clearHistory, getApiKey, setApiKey } from './store'
 import { createError } from '@shared/errors'
 import { checkAllPermissions, requestMicrophonePermission } from './permissions'
 import { openHomeWindow, openAboutWindow } from './tray'
 import { setLastTranscription, updateTrayState } from './tray'
 import { updateShortcuts, pauseHotkey, resumeHotkey } from './hotkeys'
+import {
+  searchHfModels,
+  getHfModelFiles,
+  downloadGgufModel,
+  getDownloadedGgufModels,
+  deleteGgufModel,
+  getGgufModelPath,
+} from './huggingface'
+
+/**
+ * Resolve a refinementModelPath to an absolute filesystem path.
+ * Handles "gguf://filename.gguf" → "{userData}/models/gguf/filename.gguf"
+ * and plain paths pass through unchanged.
+ */
+function resolveModelPath(path: string): string {
+  if (path.startsWith('gguf://')) {
+    return getGgufModelPath(path.slice(7))
+  }
+  return path
+}
 import type { AppSettings, TranscriptionEntry } from '@shared/types'
 import type { LocalModel } from '@shared/types'
 
@@ -196,7 +216,7 @@ export function registerIpcHandlers(): void {
       const { startLlamaServer, stopLlamaServer } = await import('./llama')
       const updatedSettings = await getSettings()
       if (updatedSettings.refinementEnabled && updatedSettings.refinementModelPath) {
-        startLlamaServer(updatedSettings.refinementModelPath).catch(console.error)
+        startLlamaServer(resolveModelPath(updatedSettings.refinementModelPath)).catch(console.error)
       } else {
         stopLlamaServer().catch(console.error)
       }
@@ -243,13 +263,28 @@ export function registerIpcHandlers(): void {
       if (settings.refinementEnabled && settings.refinementModelPath) {
         try {
           finalText = await refineText(result.text, settings)
+          console.log('[IPC] Refinement result:', {
+            original: result.text.substring(0, 60),
+            refined: finalText.substring(0, 60),
+            changed: finalText !== result.text,
+          })
         } catch (error) {
           console.warn('[IPC] Refinement failed, using original:', error)
           refinementSkipped = true
         }
+      } else {
+        console.log('[IPC] Refinement skipped:', {
+          enabled: settings.refinementEnabled,
+          hasModelPath: !!settings.refinementModelPath,
+        })
       }
 
       // Send success result — include rawText (pre-refinement) separately from text (final)
+      console.log('[IPC] Sending WHISPER_RESULT:', {
+        text: finalText.substring(0, 60),
+        rawText: result.text.substring(0, 60),
+        areDifferent: finalText !== result.text,
+      })
       BrowserWindow.getAllWindows().forEach((win) => {
         if (!win.isDestroyed()) {
           win.webContents.send(IPC.WHISPER_RESULT, { ...result, text: finalText, rawText: result.text })
@@ -460,6 +495,38 @@ export function registerIpcHandlers(): void {
 
       followRedirects(url, MAX_REDIRECTS)
     })
+  })
+
+  // ── Hugging Face ──────────────────────────────────────────────
+
+  ipcMain.handle(IPC.HF_GET_TOKEN, async (): Promise<string> => {
+    return getApiKey('huggingface')
+  })
+
+  ipcMain.handle(IPC.HF_SET_TOKEN, async (_event, token: string): Promise<void> => {
+    await setApiKey('huggingface', token)
+  })
+
+  ipcMain.handle(IPC.HF_SEARCH_MODELS, async (_event, query: string) => {
+    return searchHfModels(query)
+  })
+
+  ipcMain.handle(IPC.HF_GET_MODEL_FILES, async (_event, repoId: string) => {
+    const token = await getApiKey('huggingface')
+    return getHfModelFiles(repoId, token || undefined)
+  })
+
+  ipcMain.handle(IPC.HF_DOWNLOAD_GGUF, async (_event, repoId: string, filename: string, curatedId: string | null) => {
+    const token = await getApiKey('huggingface')
+    return downloadGgufModel(repoId, filename, curatedId, token || undefined)
+  })
+
+  ipcMain.handle(IPC.HF_GET_DOWNLOADED_GGUF, () => {
+    return getDownloadedGgufModels()
+  })
+
+  ipcMain.handle(IPC.HF_DELETE_GGUF, (_event, filename: string) => {
+    deleteGgufModel(filename)
   })
 
   // Open home window

@@ -16,7 +16,8 @@ Thumbs.db
 # MCP config (local only)
 .mcp.json
 
-# Bundled binaries and dylibs — copied from Homebrew, not committed to git
+# Bundled binaries and dylibs — built/installed by setup scripts, not committed
+bin/whisper-cpp
 bin/llama-server
 bin/*.dylib
 
