@@ -24,7 +24,7 @@
     "@nut-tree-fork/nut-js": "^4.2.0",
     "@xstate/react": "^4.1.0",
     "electron-store": "^10.0.0",
-    "iohook-macos": "^1.2.1",
+    "iohook-macos": "github:ben-smith-atg/iohook-macos-fork",
     "keytar": "^7.9.0",
     "xstate": "^5.19.0"
   },
