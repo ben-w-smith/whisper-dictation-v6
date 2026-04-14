@@ -18,8 +18,8 @@ importers:
         specifier: ^10.0.0
         version: 10.1.0
       iohook-macos:
-        specifier: github:ben-smith-atg/iohook-macos-fork
-        version: git+https://git@github.com:ben-smith-atg/iohook-macos-fork.git#190c6f511f6751a2df5ab258a7a6e1891ad1a868
+        specifier: github:ben-w-smith/iohook-macos-fork
+        version: git+https://git@github.com:ben-w-smith/iohook-macos-fork.git#9d5003ed491c4fced92210c344b6a42cf44c71ef
       keytar:
         specifier: ^7.9.0
         version: 7.9.0
@@ -2009,8 +2009,8 @@ packages:
   ini@1.3.8:
     resolution: {integrity: sha512-JV/yugV2uzW5iMRSiZAyDtQd+nxtUnjeLt0acNdw98kKLrvuRVyB80tsREOE7yvGVgalhZ6RNXCmEHkUKBKxew==}
 
-  iohook-macos@git+https://git@github.com:ben-smith-atg/iohook-macos-fork.git#190c6f511f6751a2df5ab258a7a6e1891ad1a868:
-    resolution: {commit: 190c6f511f6751a2df5ab258a7a6e1891ad1a868, repo: git@github.com:ben-smith-atg/iohook-macos-fork.git, type: git}
+  iohook-macos@git+https://git@github.com:ben-w-smith/iohook-macos-fork.git#9d5003ed491c4fced92210c344b6a42cf44c71ef:
+    resolution: {commit: 9d5003ed491c4fced92210c344b6a42cf44c71ef, repo: git@github.com:ben-w-smith/iohook-macos-fork.git, type: git}
     version: 1.2.1
     engines: {node: '>=14.0.0'}
     os: [darwin]
@@ -5313,7 +5313,7 @@ snapshots:
 
   ini@1.3.8: {}
 
-  iohook-macos@git+https://git@github.com:ben-smith-atg/iohook-macos-fork.git#190c6f511f6751a2df5ab258a7a6e1891ad1a868:
+  iohook-macos@git+https://git@github.com:ben-w-smith/iohook-macos-fork.git#9d5003ed491c4fced92210c344b6a42cf44c71ef:
     dependencies:
       node-addon-api: 7.1.1
       node-gyp-build: 4.8.4
