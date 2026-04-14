@@ -68,10 +68,16 @@ export function registerMouseButton(button: number, callback: () => void): boole
 
   // Store for pause/resume
   mouseCallback = callback
-  mouseListener = (event: EventData) => {
-    // Only trigger on the specific configured button
-    if (event.buttonNumber === button) {
-      callback()
+
+  // For left/right buttons (0/1), the event name already disambiguates them.
+  // buttonNumber is only populated for otherMouseDown events in the native code.
+  if (button <= 1) {
+    mouseListener = () => { callback() }
+  } else {
+    mouseListener = (event: EventData) => {
+      if (event.buttonNumber === button) {
+        callback()
+      }
     }
   }
 
@@ -79,7 +85,7 @@ export function registerMouseButton(button: number, callback: () => void): boole
   iohook.setEventTypeFilter(false, true, false)
   iohook.enablePerformanceMode()
 
-  // Always listen on otherMouseDown — the listener filters by buttonNumber
+  // Buttons 0/1 use dedicated event names; buttons >= 2 go through otherMouseDown
   const eventName = button <= 1
     ? (button === 0 ? 'leftMouseDown' : 'rightMouseDown')
     : 'otherMouseDown'
@@ -203,9 +209,14 @@ export function resumeHotkey(callback: () => void): void {
         iohook.removeListener('rightMouseDown', mouseListener)
       }
       mouseCallback = callback
-      mouseListener = (event: EventData) => {
-        if (event.buttonNumber === registeredMouseButton) {
-          callback()
+      // Same pattern as registerMouseButton: left/right skip buttonNumber check
+      if (registeredMouseButton <= 1) {
+        mouseListener = () => { callback() }
+      } else {
+        mouseListener = (event: EventData) => {
+          if (event.buttonNumber === registeredMouseButton) {
+            callback()
+          }
         }
       }
       const eventName = registeredMouseButton <= 1
