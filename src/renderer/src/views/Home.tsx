@@ -31,8 +31,8 @@ export function Home({ onClose, initialPage = 'general' }: HomeProps): React.Rea
   return (
     <div className="flex h-screen bg-canvas">
       {/* Sidebar */}
-      <aside className="w-[200px] bg-surface border-r border-border-custom flex-shrink-0">
-        <div className="titlebar-drag pt-8 pb-1">
+      <aside className="w-[180px] bg-surface border-r border-border-custom flex-shrink-0">
+        <div className="titlebar-drag pt-8 pb-2 border-b border-border-custom">
           <span className="px-4 text-xs font-medium text-text-muted">Whisper Dictation</span>
         </div>
         <nav className="p-2">
@@ -41,11 +41,11 @@ export function Home({ onClose, initialPage = 'general' }: HomeProps): React.Rea
               key={page.id}
               onClick={() => setActivePage(page.id)}
               className={`
-                w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors
+                w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
                 focus-visible:ring-2 focus-visible:ring-accent/30 focus-visible:outline-none
                 ${activePage === page.id
-                  ? 'bg-accent-subtle text-accent'
-                  : 'text-text-secondary hover:bg-stone-100'
+                  ? 'bg-[#ebe6df] text-text-primary'
+                  : 'text-text-secondary hover:bg-[#f5f2ef]'
                 }
               `}
             >
@@ -60,7 +60,7 @@ export function Home({ onClose, initialPage = 'general' }: HomeProps): React.Rea
         <header className="titlebar-drag flex items-center justify-end px-5 py-2 border-b border-border-custom bg-surface">
           <button
             onClick={handleClose}
-            className="titlebar-no-drag p-1.5 text-text-secondary hover:text-text-primary hover:bg-stone-100 rounded-lg transition-colors"
+            className="titlebar-no-drag p-1.5 text-text-secondary hover:text-text-primary hover:bg-[#ebe6df] rounded-lg transition-colors"
             aria-label="Close"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
