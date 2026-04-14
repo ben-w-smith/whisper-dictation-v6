@@ -27,6 +27,17 @@ function resolveModelPath(path: string): string {
 // in windows that have never received user interaction (like our hidden background window).
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required')
 
+// Suppress EPIPE errors — when the launching terminal closes its pipe, console.log
+// throws an uncaught EPIPE that crashes the app. Intercept stdout/stderr writes.
+process.stdout.on('error', (err: NodeJS.ErrnoException) => {
+  if (err.code === 'EPIPE') return
+  throw err
+})
+process.stderr.on('error', (err: NodeJS.ErrnoException) => {
+  if (err.code === 'EPIPE') return
+  throw err
+})
+
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
 
@@ -110,20 +121,17 @@ async function setupHotkeys(): Promise<void> {
     mainWindow?.webContents.send(IPC.HOTKEY_TRIGGERED)
   }
 
-  // Try to register mouse button first if set
+  // Register keyboard shortcuts (always)
+  const keyboardSuccess = registerHotkeys(shortcuts, callback)
+  if (!keyboardSuccess) {
+    console.error('[Main] Failed to register keyboard shortcuts:', shortcuts)
+  }
+
+  // Register mouse button (independently, if set)
   if (mouseButton !== null) {
     const mouseSuccess = registerMouseButton(mouseButton, callback)
     if (!mouseSuccess) {
-      // Fall back to keyboard shortcuts
-      const keyboardSuccess = registerHotkeys(shortcuts, callback)
-      if (!keyboardSuccess) {
-        console.error('[Main] Failed to register keyboard shortcuts:', shortcuts)
-      }
-    }
-  } else {
-    const success = registerHotkeys(shortcuts, callback)
-    if (!success) {
-      console.error('[Main] Failed to register default hotkeys:', shortcuts)
+      console.warn('[Main] Mouse button registration failed — keyboard shortcuts still active')
     }
   }
 }

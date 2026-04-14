@@ -22,9 +22,8 @@ export function ShortcutRecorder({
       const mouseNames: Record<number, string> = {
         3: 'Back Button',
         4: 'Forward Button',
-        1: 'Side Button 1',
-        2: 'Side Button 2',
       }
+      // macOS buttonNumber matches DOM for 3+. For 5+, show generic name.
       setDisplayValue(mouseNames[mouseButton] || `Button ${mouseButton}`)
     } else if (value) {
       setDisplayValue(formatAccelerator(value))
@@ -46,21 +45,36 @@ export function ShortcutRecorder({
 
   const isRecordingRef = React.useRef(false)
 
+  const stopRecording = useCallback(() => {
+    isRecordingRef.current = false
+    setIsRecording(false)
+    // Re-register the global hotkey and stop iohook capture
+    window.api.send(IPC.RESUME_HOTKEY)
+  }, [])
+
+  // Listen for mouse button captures from iohook (main process)
+  useEffect(() => {
+    const unsub = window.api.on(IPC.MOUSE_BUTTON_CAPTURED, (macOSButton: number) => {
+      if (!isRecordingRef.current) return
+      // Don't call stopRecording() here — it sends RESUME_HOTKEY which races
+      // with SET_SETTING. The SET_SETTING handler re-registers shortcuts already.
+      isRecordingRef.current = false
+      setIsRecording(false)
+      onChange(null, macOSButton)
+    })
+    return () => { unsub?.() }
+  }, [onChange])
+
   const startRecording = useCallback(() => {
     if (disabled) return
     // Unregister the global hotkey so pressing it here doesn't trigger recording
     window.api.send(IPC.PAUSE_HOTKEY)
+    // Start iohook capture for mouse buttons (sees all buttons including 5+)
+    window.api.send(IPC.CAPTURE_MOUSE_BUTTON)
     isRecordingRef.current = true
     setIsRecording(true)
     setDisplayValue('Press keys or mouse button...')
   }, [disabled])
-
-  const stopRecording = useCallback(() => {
-    isRecordingRef.current = false
-    setIsRecording(false)
-    // Re-register the global hotkey
-    window.api.send(IPC.RESUME_HOTKEY)
-  }, [])
 
   // If the settings window closes while the recorder is active, the hotkey
   // must be re-registered — otherwise it stays silently unregistered forever.
@@ -115,26 +129,12 @@ export function ShortcutRecorder({
     [isRecording, onChange, stopRecording]
   )
 
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      if (!isRecording || e.button < 3) return
-
-      e.preventDefault()
-      e.stopPropagation()
-
-      onChange(null, e.button)
-      stopRecording()
-    },
-    [isRecording, onChange, stopRecording]
-  )
-
   return (
     <div className="flex items-center gap-2">
       <button
         type="button"
         onClick={startRecording}
         onKeyDown={handleKeyDown}
-        onMouseDown={handleMouseDown}
         disabled={disabled}
         className={`
           px-3 py-2 rounded-lg border-2 text-sm font-mono transition-all duration-200
