@@ -124,7 +124,7 @@ export function GeneralPage(): React.ReactElement {
             <div className="flex items-center gap-2">
               <div className="text-text-primary font-medium">Microphone</div>
               {micPermission === 'granted' && (
-                <span className="flex items-center gap-1 text-xs text-green-600 font-medium">
+                <span className="flex items-center gap-1 text-xs text-success font-medium">
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                   </svg>
