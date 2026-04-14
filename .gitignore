@@ -49,3 +49,12 @@ coverage/
 
 # TypeScript
 *.tsbuildinfo
+
+# Storybook
+storybook-static/
+
+# Playwright MCP
+.playwright-mcp/
+
+# Screenshots
+screenshots/
