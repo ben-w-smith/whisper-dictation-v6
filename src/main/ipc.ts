@@ -14,7 +14,7 @@ import { createError } from '@shared/errors'
 import { checkAllPermissions, requestMicrophonePermission } from './permissions'
 import { openHomeWindow, openAboutWindow } from './tray'
 import { setLastTranscription, updateTrayState } from './tray'
-import { updateShortcuts, registerMouseButton, pauseHotkey, resumeHotkey } from './hotkeys'
+import { updateShortcuts, registerMouseButton, unregisterMouseButton, pauseHotkey, resumeHotkey } from './hotkeys'
 import {
   searchHfModels,
   getHfModelFiles,
@@ -206,14 +206,18 @@ export function registerIpcHandlers(): void {
       const mainWin = BrowserWindow.getAllWindows().find(w => w.getTitle() === 'Whisper Dictation')
       if (mainWin) {
         const updatedSettings = await getSettings()
+        const callback = () => {
+          mainWin.webContents.send(IPC.HOTKEY_TRIGGERED)
+        }
+
+        // Re-register keyboard shortcuts (always)
+        updateShortcuts(updatedSettings.keyboardShortcuts, callback)
+
+        // Re-register or clear mouse button (independently)
         if (updatedSettings.mouseButton != null) {
-          registerMouseButton(updatedSettings.mouseButton, () => {
-            mainWin.webContents.send(IPC.HOTKEY_TRIGGERED)
-          })
+          registerMouseButton(updatedSettings.mouseButton, callback)
         } else {
-          updateShortcuts(updatedSettings.keyboardShortcuts, () => {
-            mainWin.webContents.send(IPC.HOTKEY_TRIGGERED)
-          })
+          unregisterMouseButton()
         }
       }
     }

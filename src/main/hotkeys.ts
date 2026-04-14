@@ -94,6 +94,12 @@ export function registerMouseButton(button: number, callback: () => void): boole
   return true
 }
 
+/** Unregister mouse button monitoring only. Keyboard shortcuts are preserved. */
+export function unregisterMouseButton(): void {
+  stopMouseMonitoring()
+  console.log('[Hotkeys] Unregistered mouse button')
+}
+
 /** Stop mouse monitoring and clean up state. */
 function stopMouseMonitoring(): void {
   if (registeredMouseButton === null) return
