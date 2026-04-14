@@ -82,19 +82,19 @@ export function GeneralPage(): React.ReactElement {
   return (
     <div className="space-y-6">
       <section>
-        <h3 className="text-[15px] font-semibold text-text-primary mb-4">Audio Input</h3>
+        <h3 className="text-[14px] font-semibold text-text-primary uppercase tracking-wide mb-3">Audio Input</h3>
 
         {micPermission === 'denied' && (
-          <div className="flex items-start gap-3 p-3 mb-3 bg-red-50 border border-red-200 rounded-lg">
-            <svg className="w-5 h-5 text-red-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="flex items-start gap-3 p-3 mb-3 bg-danger-subtle border border-danger/20 rounded-lg">
+            <svg className="w-5 h-5 text-danger shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
             <div className="flex-1">
-              <div className="text-sm font-medium text-red-700">Microphone access denied</div>
-              <div className="text-xs text-red-600 mt-0.5">Enable access in System Settings to use dictation.</div>
+              <div className="text-sm font-medium text-danger">Microphone access denied</div>
+              <div className="text-xs text-danger/80 mt-0.5">Enable access in System Settings to use dictation.</div>
               <button
                 onClick={() => window.api.invoke(IPC.OPEN_SYSTEM_SETTINGS, 'microphone')}
-                className="mt-1.5 text-xs font-medium text-red-600 hover:text-red-700 underline underline-offset-2"
+                className="mt-1.5 text-xs font-medium text-danger hover:text-danger/80 underline underline-offset-2"
               >
                 Open System Settings →
               </button>
@@ -102,16 +102,16 @@ export function GeneralPage(): React.ReactElement {
           </div>
         )}
         {micPermission === 'prompt' && (
-          <div className="flex items-start gap-3 p-3 mb-3 bg-amber-50 border border-amber-200 rounded-lg">
-            <svg className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="flex items-start gap-3 p-3 mb-3 bg-warning-subtle border border-warning/20 rounded-lg">
+            <svg className="w-5 h-5 text-warning shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
             <div className="flex-1">
-              <div className="text-sm font-medium text-amber-700">Microphone permission required</div>
-              <div className="text-xs text-amber-600 mt-0.5">Grant access so the app can record your voice.</div>
+              <div className="text-sm font-medium text-warning">Microphone permission required</div>
+              <div className="text-xs text-warning/80 mt-0.5">Grant access so the app can record your voice.</div>
               <button
                 onClick={requestMicPermission}
-                className="mt-1.5 text-xs font-medium text-amber-600 hover:text-amber-700 underline underline-offset-2"
+                className="mt-1.5 text-xs font-medium text-warning hover:text-warning/80 underline underline-offset-2"
               >
                 Grant Access →
               </button>
@@ -164,9 +164,9 @@ export function GeneralPage(): React.ReactElement {
       </section>
 
       <section>
-        <h3 className="text-[15px] font-semibold text-text-primary mb-4">Output</h3>
+        <h3 className="text-[14px] font-semibold text-text-primary uppercase tracking-wide mb-3">Output</h3>
         <div className="space-y-4">
-          <div className="flex items-center justify-between py-2 border-b border-border-custom last:border-b-0">
+          <div className="flex items-center justify-between py-3">
             <div>
               <div className="text-text-primary font-medium">Copy to clipboard</div>
               <div className="text-sm text-text-secondary">Copy transcribed text to clipboard</div>
@@ -176,7 +176,7 @@ export function GeneralPage(): React.ReactElement {
               onChange={(checked) => updateSetting('copyToClipboard', checked)}
             />
           </div>
-          <div className="flex items-center justify-between py-2 border-b border-border-custom last:border-b-0">
+          <div className="flex items-center justify-between py-3">
             <div>
               <div className="text-text-primary font-medium">Auto-paste</div>
               <div className="text-sm text-text-secondary">Automatically paste transcribed text</div>
@@ -186,7 +186,7 @@ export function GeneralPage(): React.ReactElement {
               onChange={(checked) => updateSetting('autoPaste', checked)}
             />
           </div>
-          <div className="flex items-center justify-between py-2 border-b border-border-custom last:border-b-0">
+          <div className="flex items-center justify-between py-3">
             <div>
               <div className="text-text-primary font-medium">Play sounds</div>
               <div className="text-sm text-text-secondary">Play sound effects when recording</div>
@@ -196,7 +196,7 @@ export function GeneralPage(): React.ReactElement {
               onChange={(checked) => updateSetting('playSounds', checked)}
             />
           </div>
-          <div className="flex items-center justify-between py-2 border-b border-border-custom last:border-b-0">
+          <div className="flex items-center justify-between py-3">
             <div>
               <div className="text-text-primary font-medium">Show overlay</div>
               <div className="text-sm text-text-secondary">Show floating recording indicator</div>
@@ -210,7 +210,7 @@ export function GeneralPage(): React.ReactElement {
       </section>
 
       <section>
-        <h3 className="text-[15px] font-semibold text-text-primary mb-4">Shortcuts</h3>
+        <h3 className="text-[14px] font-semibold text-text-primary uppercase tracking-wide mb-3">Shortcuts</h3>
         <div>
           <div className="text-sm text-text-secondary mb-3">
             Press your shortcut to start recording, press again to stop.
@@ -240,7 +240,7 @@ export function GeneralPage(): React.ReactElement {
                       const updated = settings.keyboardShortcuts.filter((_, i) => i !== index)
                       updateSetting('keyboardShortcuts', updated)
                     }}
-                    className="p-2 text-text-muted hover:text-text-primary hover:bg-canvas rounded-lg transition-colors"
+                    className="p-2 text-text-muted hover:text-text-primary hover:bg-[#ebe6df] rounded-lg transition-colors"
                     aria-label="Remove shortcut"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
