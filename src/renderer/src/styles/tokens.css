@@ -4,31 +4,35 @@
   /* Design tokens as CSS custom properties */
 
   /* Surfaces */
-  --color-canvas: #fafaf9;
+  --color-canvas: #f7f5f2;
   --color-surface: #ffffff;
   --color-overlay: rgba(15, 15, 18, 0.85);
 
   /* Text */
-  --color-text-primary: #1c1917;
+  --color-text-primary: #292524;
   --color-text-secondary: #78716c;
   --color-text-muted: #a8a29e;
 
   /* Accent */
   --color-accent: #0d9488;
   --color-accent-hover: #0f766e;
-  --color-accent-subtle: #f0fdfa;
+  --color-accent-subtle: #eef8f5;
+
+  /* Selection & active states */
+  --color-selection: #f0ece6;
+  --color-selection-text: #44403c;
 
   /* Borders & dividers */
-  --color-border-custom: #e7e5e4;
-  --color-border-hover: #d6d3d1;
+  --color-border-custom: #e8e5e1;
+  --color-border-hover: #d5d0ca;
 
   /* Semantic state colors */
   --color-success: #16a34a;
-  --color-success-subtle: #f0fdf4;
+  --color-success-subtle: #eef7f0;
   --color-warning: #d97706;
-  --color-warning-subtle: #fffbeb;
+  --color-warning-subtle: #faf5eb;
   --color-danger: #dc2626;
-  --color-danger-subtle: #fef2f2;
+  --color-danger-subtle: #faf0f0;
   --color-info: #3b82f6;
   --color-info-subtle: #eff6ff;
 
@@ -116,6 +120,19 @@
 
 @utility bg-border-custom {
   background-color: var(--color-border-custom);
+}
+
+/* Selection & active state utilities */
+@utility bg-selection {
+  background-color: var(--color-selection);
+}
+
+@utility text-selection-text {
+  color: var(--color-selection-text);
+}
+
+@utility border-selection {
+  border-color: var(--color-selection);
 }
 
 @utility ring-focus {
