@@ -222,15 +222,24 @@ export function GeneralPage(): React.ReactElement {
                   value={shortcut}
                   mouseButton={index === 0 ? settings.mouseButton : null}
                   onChange={(keyboard, mouse) => {
-                    const updated = [...settings.keyboardShortcuts]
-                    if (keyboard) {
-                      updated[index] = keyboard
-                    } else {
-                      updated.splice(index, 1)
-                    }
-                    updateSetting('keyboardShortcuts', updated.length > 0 ? updated : DEFAULT_SETTINGS.keyboardShortcuts)
-                    if (index === 0 && mouse !== undefined) {
+                    // Mouse button captured
+                    if (typeof mouse === 'number' && index === 0) {
                       updateSetting('mouseButton', mouse)
+                      return
+                    }
+                    // Keyboard shortcut captured
+                    if (keyboard) {
+                      const updated = [...settings.keyboardShortcuts]
+                      updated[index] = keyboard
+                      updateSetting('keyboardShortcuts', updated)
+                      return
+                    }
+                    // Clear: both null
+                    if (index === 0) {
+                      updateSetting('mouseButton', null)
+                    } else {
+                      const updated = settings.keyboardShortcuts.filter((_, i) => i !== index)
+                      updateSetting('keyboardShortcuts', updated)
                     }
                   }}
                 />

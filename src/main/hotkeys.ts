@@ -52,6 +52,23 @@ export function registerHotkeys(shortcuts: string[], callback: () => void): bool
 }
 
 /**
+ * Map DOM MouseEvent.button to macOS event name and buttonNumber.
+ *
+ * DOM:        0=left, 1=middle, 2=right, 3=back, 4=forward
+ * macOS:      0=left, 1=right,  2=middle, 3=back, 4=forward
+ *
+ * Buttons 3+ match between DOM and macOS. Only 0-2 differ.
+ */
+function domButtonToMacOS(domButton: number): { eventName: string, buttonNumber: number } {
+  switch (domButton) {
+    case 0: return { eventName: 'leftMouseDown', buttonNumber: 0 }
+    case 2: return { eventName: 'rightMouseDown', buttonNumber: 1 }
+    case 1: return { eventName: 'otherMouseDown', buttonNumber: 2 } // middle
+    default: return { eventName: 'otherMouseDown', buttonNumber: domButton }
+  }
+}
+
+/**
  * Register a mouse button as a recording shortcut using iohook-macos.
  * Requires macOS Accessibility (TCC) permissions for global mouse monitoring.
  */
@@ -66,29 +83,26 @@ export function registerMouseButton(button: number, callback: () => void): boole
   // Clean up any existing mouse registration
   stopMouseMonitoring()
 
+  const { eventName, buttonNumber: macOSButton } = domButtonToMacOS(button)
+
   // Store for pause/resume
   mouseCallback = callback
 
-  // For left/right buttons (0/1), the event name already disambiguates them.
-  // buttonNumber is only populated for otherMouseDown events in the native code.
-  if (button <= 1) {
-    mouseListener = () => { callback() }
-  } else {
+  // For left/right, the event name already disambiguates — no buttonNumber check needed.
+  // For otherMouseDown events, filter on the macOS buttonNumber.
+  if (eventName === 'otherMouseDown') {
     mouseListener = (event: EventData) => {
-      if (event.buttonNumber === button) {
+      if (event.buttonNumber === macOSButton) {
         callback()
       }
     }
+  } else {
+    mouseListener = () => { callback() }
   }
 
   // Only queue mouse events (skip keyboard/scroll for performance)
   iohook.setEventTypeFilter(false, true, false)
   iohook.enablePerformanceMode()
-
-  // Buttons 0/1 use dedicated event names; buttons >= 2 go through otherMouseDown
-  const eventName = button <= 1
-    ? (button === 0 ? 'leftMouseDown' : 'rightMouseDown')
-    : 'otherMouseDown'
 
   iohook.on(eventName, mouseListener)
   iohook.startMonitoring()
@@ -96,7 +110,7 @@ export function registerMouseButton(button: number, callback: () => void): boole
   registeredMouseButton = button
   isMousePaused = false
 
-  console.log(`[Hotkeys] Registered mouse button ${button}`)
+  console.log(`[Hotkeys] Registered mouse button ${button} (macOS: ${macOSButton}, event: ${eventName})`)
   return true
 }
 
@@ -159,6 +173,32 @@ export function isRegistered(): boolean {
 }
 
 /**
+ * Start listening for the next mouse button press via iohook.
+ * Used by the shortcut recorder to capture buttons that DOM events can't see (5+).
+ * Calls `onCapture` once with the macOS buttonNumber, then stops.
+ */
+export function captureMouseButton(onCapture: (macOSButton: number) => void): void {
+  const listener = (event: EventData) => {
+    // Only capture extra buttons (middle=2, back=3, forward=4, side=5+)
+    if (event.buttonNumber !== undefined && event.buttonNumber >= 2) {
+      // Clean up immediately — one-shot capture
+      try {
+        iohook.removeListener('otherMouseDown', listener)
+        iohook.stopMonitoring()
+      } catch { /* ignore */ }
+      console.log(`[Hotkeys] Captured mouse button: macOS ${event.buttonNumber}`)
+      onCapture(event.buttonNumber)
+    }
+  }
+
+  iohook.setEventTypeFilter(false, true, false)
+  iohook.enablePerformanceMode()
+  iohook.on('otherMouseDown', listener)
+  iohook.startMonitoring()
+  console.log('[Hotkeys] Listening for mouse button capture...')
+}
+
+/**
  * Temporarily unregister all hotkeys while the shortcut recorder is open.
  */
 export function pauseHotkey(): void {
@@ -209,19 +249,16 @@ export function resumeHotkey(callback: () => void): void {
         iohook.removeListener('rightMouseDown', mouseListener)
       }
       mouseCallback = callback
-      // Same pattern as registerMouseButton: left/right skip buttonNumber check
-      if (registeredMouseButton <= 1) {
-        mouseListener = () => { callback() }
-      } else {
+      const { eventName, buttonNumber: macOSButton } = domButtonToMacOS(registeredMouseButton)
+      if (eventName === 'otherMouseDown') {
         mouseListener = (event: EventData) => {
-          if (event.buttonNumber === registeredMouseButton) {
+          if (event.buttonNumber === macOSButton) {
             callback()
           }
         }
+      } else {
+        mouseListener = () => { callback() }
       }
-      const eventName = registeredMouseButton <= 1
-        ? (registeredMouseButton === 0 ? 'leftMouseDown' : 'rightMouseDown')
-        : 'otherMouseDown'
       iohook.on(eventName, mouseListener)
       iohook.startMonitoring()
       isMousePaused = false

@@ -19,6 +19,8 @@ export const IPC = {
   UPDATE_TRAY_STATE: 'tray:update-state',
   PAUSE_HOTKEY: 'hotkey:pause',
   RESUME_HOTKEY: 'hotkey:resume',
+  CAPTURE_MOUSE_BUTTON: 'hotkey:capture-mouse',
+  MOUSE_BUTTON_CAPTURED: 'hotkey:mouse-captured',
   REQUEST_MICROPHONE: 'permissions:request-microphone',
   OPEN_SYSTEM_SETTINGS: 'app:open-system-settings',
 

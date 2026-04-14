@@ -14,7 +14,7 @@ import { createError } from '@shared/errors'
 import { checkAllPermissions, requestMicrophonePermission } from './permissions'
 import { openHomeWindow, openAboutWindow } from './tray'
 import { setLastTranscription, updateTrayState } from './tray'
-import { updateShortcuts, registerMouseButton, unregisterMouseButton, pauseHotkey, resumeHotkey } from './hotkeys'
+import { updateShortcuts, registerMouseButton, unregisterMouseButton, pauseHotkey, resumeHotkey, captureMouseButton } from './hotkeys'
 import {
   searchHfModels,
   getHfModelFiles,
@@ -600,6 +600,16 @@ export function registerIpcHandlers(): void {
         mainWin.webContents.send(IPC.HOTKEY_TRIGGERED)
       })
     }
+  })
+
+  // Capture next mouse button press via iohook (for buttons DOM can't see)
+  ipcMain.on(IPC.CAPTURE_MOUSE_BUTTON, (event) => {
+    captureMouseButton((macOSButton) => {
+      // Send back to whichever window requested the capture (settings, onboarding, etc.)
+      if (!event.sender.isDestroyed()) {
+        event.sender.send(IPC.MOUSE_BUTTON_CAPTURED, macOSButton)
+      }
+    })
   })
 
   // Quit application

@@ -27,6 +27,17 @@ function resolveModelPath(path: string): string {
 // in windows that have never received user interaction (like our hidden background window).
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required')
 
+// Suppress EPIPE errors — when the launching terminal closes its pipe, console.log
+// throws an uncaught EPIPE that crashes the app. Intercept stdout/stderr writes.
+process.stdout.on('error', (err: NodeJS.ErrnoException) => {
+  if (err.code === 'EPIPE') return
+  throw err
+})
+process.stderr.on('error', (err: NodeJS.ErrnoException) => {
+  if (err.code === 'EPIPE') return
+  throw err
+})
+
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
 

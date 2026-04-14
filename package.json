@@ -18,7 +18,7 @@
     "lint": "tsc --noEmit",
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
-    "app": "electron-vite build && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --dir --config.mac.hardenedRuntime=false && open 'dist/mac-arm64/Whisper Dictation.app'"
+    "app": "electron-vite build && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --dir --config.mac.hardenedRuntime=false && \"dist/mac-arm64/Whisper Dictation.app/Contents/MacOS/Whisper Dictation\""
   },
   "dependencies": {
     "@nut-tree-fork/nut-js": "^4.2.0",
