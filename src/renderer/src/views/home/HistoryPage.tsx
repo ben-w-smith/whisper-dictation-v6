@@ -12,29 +12,11 @@ export function HistoryPage(): React.ReactElement {
   useEffect(() => {
     const loadHistory = async () => {
       const loaded = await window.api.invoke(IPC.GET_HISTORY) as TranscriptionEntry[]
-      // Debug: log first few entries to check rawText
-      loaded.slice(0, 3).forEach((e) => {
-        console.log('[HistoryPage] Entry:', {
-          id: e.id.substring(0, 8),
-          text: e.text?.substring(0, 40),
-          rawText: e.rawText?.substring(0, 40),
-          hasRawText: !!e.rawText,
-          areDifferent: e.rawText !== e.text,
-          refinedWith: e.refinedWith,
-        })
-      })
       setHistory(loaded.sort((a, b) => b.timestamp - a.timestamp))
     }
     loadHistory()
-
-    // Listen for history updates from main process
-    const unsubscribe = window.api.on(IPC.HISTORY_UPDATED, () => {
-      loadHistory()
-    })
-
-    return () => {
-      unsubscribe()
-    }
+    const unsubscribe = window.api.on(IPC.HISTORY_UPDATED, () => { loadHistory() })
+    return () => { unsubscribe() }
   }, [])
 
   const handleClearAll = async () => {
@@ -46,25 +28,14 @@ export function HistoryPage(): React.ReactElement {
   const formatTimestamp = (timestamp: number): string => {
     const now = new Date()
     const date = new Date(timestamp)
-    const timeStr = date.toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-    })
-
+    const timeStr = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
     const isToday = now.toDateString() === date.toDateString()
     const yesterday = new Date(now)
     yesterday.setDate(yesterday.getDate() - 1)
     const isYesterday = yesterday.toDateString() === date.toDateString()
-
     if (isToday) return `today at ${timeStr}`
     if (isYesterday) return `yesterday at ${timeStr}`
-
-    const monthDay = date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-    })
-    return `${monthDay} at ${timeStr}`
+    return `${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} at ${timeStr}`
   }
 
   const getProviderBadge = (provider: string): { label: string; className: string } => {
@@ -78,12 +49,8 @@ export function HistoryPage(): React.ReactElement {
 
   const formatMetadata = (entry: TranscriptionEntry): string | null => {
     const parts: string[] = []
-    if (entry.transcriptionModel) {
-      parts.push(entry.transcriptionModel)
-    }
-    if (entry.transcriptionDurationMs != null) {
-      parts.push(`${(entry.transcriptionDurationMs / 1000).toFixed(1)}s`)
-    }
+    if (entry.transcriptionModel) parts.push(entry.transcriptionModel)
+    if (entry.transcriptionDurationMs != null) parts.push(`${(entry.transcriptionDurationMs / 1000).toFixed(1)}s`)
     if (entry.refinementModel) {
       const label = entry.refinementDurationMs != null
         ? `${entry.refinementModel} (${(entry.refinementDurationMs / 1000).toFixed(1)}s)`
@@ -99,29 +66,16 @@ export function HistoryPage(): React.ReactElement {
 
   const stats = useMemo(() => {
     if (history.length === 0) return null
-
     const totalWords = history.reduce((sum, e) => sum + e.wordCount, 0)
     const sessions = history.length
-
     const validWpmEntries = history.filter((e) => e.audioDurationMs >= 1000)
-    const avgWpm =
-      validWpmEntries.length > 0
-        ? validWpmEntries.reduce(
-            (sum, e) => sum + e.wordCount / (e.audioDurationMs / 60000),
-            0
-          ) / validWpmEntries.length
-        : 0
-
+    const avgWpm = validWpmEntries.length > 0
+      ? validWpmEntries.reduce((sum, e) => sum + e.wordCount / (e.audioDurationMs / 60000), 0) / validWpmEntries.length
+      : 0
     const todayStart = new Date()
     todayStart.setHours(0, 0, 0, 0)
     const todayCount = history.filter((e) => e.timestamp >= todayStart.getTime()).length
-
-    return {
-      totalWords,
-      sessions,
-      avgWpm: Math.round(avgWpm * 10) / 10,
-      todayCount,
-    }
+    return { totalWords, sessions, avgWpm: Math.round(avgWpm * 10) / 10, todayCount }
   }, [history])
 
   const copyToClipboard = (text: string, entryId: string) => {
@@ -134,12 +88,7 @@ export function HistoryPage(): React.ReactElement {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-4">
         <div className="flex-1 relative">
-          <svg
-            className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
+          <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
           <input
@@ -155,7 +104,7 @@ export function HistoryPage(): React.ReactElement {
           <button
             onClick={() => setShowClearConfirm(true)}
             aria-label="Clear all history"
-            className="px-3 py-2 text-xs font-medium text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+            className="px-3 py-2 text-xs font-medium text-text-secondary hover:text-danger hover:bg-danger-subtle rounded-lg transition-colors"
           >
             Clear All
           </button>
@@ -163,21 +112,26 @@ export function HistoryPage(): React.ReactElement {
       </div>
 
       {showClearConfirm && (
-        <div className="p-4 rounded-xl border border-red-200 bg-red-50">
-          <p className="text-text-primary mb-3">Are you sure you want to clear all history? This cannot be undone.</p>
-          <div className="flex gap-2">
-            <button
-              onClick={handleClearAll}
-              className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
-            >
-              Clear All
-            </button>
-            <button
-              onClick={() => setShowClearConfirm(false)}
-              className="px-4 py-2 text-sm font-medium text-text-secondary hover:bg-canvas rounded-lg transition-colors"
-            >
-              Cancel
-            </button>
+        <div className="flex items-start gap-3 p-4 bg-danger-subtle border border-[#e8c4c4] rounded-lg">
+          <svg className="w-5 h-5 text-danger shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <div className="flex-1">
+            <p className="text-sm text-text-primary mb-3">Are you sure you want to clear all history? This cannot be undone.</p>
+            <div className="flex gap-2">
+              <button
+                onClick={handleClearAll}
+                className="px-4 py-2 text-sm font-medium text-white bg-danger rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Clear All
+              </button>
+              <button
+                onClick={() => setShowClearConfirm(false)}
+                className="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-canvas rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -187,14 +141,9 @@ export function HistoryPage(): React.ReactElement {
       )}
 
       {filteredHistory.length === 0 ? (
-        <div className="py-20 text-center">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-canvas mb-4">
-            <svg
-              className="w-6 h-6 text-text-muted"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
+        <div className="py-16 text-center">
+          <div className="w-12 h-12 rounded-2xl bg-canvas mx-auto mb-4 flex items-center justify-center">
+            <svg className="w-6 h-6 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
             </svg>
           </div>
@@ -216,40 +165,26 @@ export function HistoryPage(): React.ReactElement {
             return (
               <div
                 key={entry.id}
-                className={`py-4 group transition-colors ${
-                  isShowingRaw ? 'bg-amber-50/30 -mx-0 px-0' : ''
-                }`}
+                className={`py-4 group transition-colors ${isShowingRaw ? 'bg-warning-subtle/30 -mx-2 px-2 rounded-lg' : ''}`}
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
-                    <p className="text-text-primary leading-relaxed whitespace-pre-wrap text-[13px]">
-                      {displayText}
-                    </p>
+                    <p className="text-text-primary leading-relaxed whitespace-pre-wrap text-[13px]">{displayText}</p>
                     <div className="flex items-center gap-1.5 mt-2.5">
-                      <span className={`text-[11px] px-1.5 py-px rounded font-medium ${providerBadge.className}`}>
+                      <span className={`text-[11px] px-1.5 py-0.5 rounded font-medium ${providerBadge.className}`}>
                         {providerBadge.label}
                       </span>
                       {hasRefinement && !isShowingRaw && (
-                        <span className="text-[11px] px-1.5 py-px rounded font-medium bg-info-subtle text-info">
-                          Refined
-                        </span>
+                        <span className="text-[11px] px-1.5 py-0.5 rounded font-medium bg-accent-subtle text-accent">Refined</span>
                       )}
                       {isShowingRaw && (
-                        <span className="text-[11px] px-1.5 py-px rounded font-medium bg-warning-subtle text-warning">
-                          Original
-                        </span>
+                        <span className="text-[11px] px-1.5 py-0.5 rounded font-medium bg-warning-subtle text-warning">Original</span>
                       )}
-                      <span className="text-[11px] text-text-muted">
-                        {formatTimestamp(entry.timestamp)}
-                      </span>
-                      <span className="text-[11px] text-text-muted">
-                        {entry.wordCount} words
-                      </span>
+                      <span className="text-[11px] text-text-muted">{formatTimestamp(entry.timestamp)}</span>
+                      <span className="text-[11px] text-text-muted">{entry.wordCount} words</span>
                     </div>
                     {formatMetadata(entry) && (
-                      <div className="text-[11px] text-text-muted mt-0.5">
-                        {formatMetadata(entry)}
-                      </div>
+                      <div className="text-[11px] text-text-muted mt-0.5">{formatMetadata(entry)}</div>
                     )}
                   </div>
                   <div className="flex items-center gap-0.5 mt-0.5">
@@ -258,18 +193,15 @@ export function HistoryPage(): React.ReactElement {
                         onClick={() => {
                           setShowingRaw((prev) => {
                             const next = new Set(prev)
-                            if (next.has(entry.id)) {
-                              next.delete(entry.id)
-                            } else {
-                              next.add(entry.id)
-                            }
+                            if (next.has(entry.id)) next.delete(entry.id)
+                            else next.add(entry.id)
                             return next
                           })
                         }}
                         className={`p-2 rounded-lg transition-colors ${
                           isShowingRaw
-                            ? 'text-amber-500 bg-amber-100'
-                            : 'text-stone-300 hover:text-amber-500 hover:bg-amber-50 opacity-30 hover:opacity-100 focus:opacity-100'
+                            ? 'text-warning bg-warning-subtle'
+                            : 'text-text-muted hover:text-warning hover:bg-warning-subtle opacity-0 group-hover:opacity-100 focus:opacity-100'
                         }`}
                         title={isShowingRaw ? 'Show refined text' : 'Show original transcription'}
                       >
@@ -284,10 +216,10 @@ export function HistoryPage(): React.ReactElement {
                     )}
                     <button
                       onClick={() => copyToClipboard(displayText, entry.id)}
-                      className={`p-2 rounded-lg transition-all duration-200 ${
+                      className={`p-2 rounded-lg transition-colors ${
                         copiedId === entry.id
-                          ? 'text-teal-500 bg-teal-50'
-                          : 'text-stone-300 hover:text-accent hover:bg-accent-subtle opacity-30 hover:opacity-100 focus:opacity-100'
+                          ? 'text-accent bg-accent-subtle'
+                          : 'text-text-muted hover:text-accent hover:bg-accent-subtle opacity-0 group-hover:opacity-100 focus:opacity-100'
                       }`}
                       title={copiedId === entry.id ? 'Copied!' : 'Copy to clipboard'}
                     >
