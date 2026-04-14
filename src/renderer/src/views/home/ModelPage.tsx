@@ -64,7 +64,7 @@ export function ModelPage(): React.ReactElement {
   return (
     <div className="space-y-6">
       <section>
-        <h3 className="text-[15px] font-semibold text-text-primary mb-4">Local Model</h3>
+        <h3 className="text-[14px] font-semibold text-text-primary uppercase tracking-wide mb-3">Local Model</h3>
         <div className="space-y-3">
           {(Object.keys(MODEL_INFO) as LocalModel[]).map((model) => {
             const info = MODEL_INFO[model]

@@ -155,7 +155,7 @@ export function HistoryPage(): React.ReactElement {
           <button
             onClick={() => setShowClearConfirm(true)}
             aria-label="Clear all history"
-            className="px-3 py-2 text-xs font-medium text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+            className="px-3 py-2 text-xs font-medium text-text-muted hover:text-danger hover:bg-danger-subtle rounded-lg transition-colors"
           >
             Clear All
           </button>
@@ -163,18 +163,18 @@ export function HistoryPage(): React.ReactElement {
       </div>
 
       {showClearConfirm && (
-        <div className="p-4 rounded-xl border border-red-200 bg-red-50">
+        <div className="p-4 rounded-xl border border-danger/20 bg-danger-subtle">
           <p className="text-text-primary mb-3">Are you sure you want to clear all history? This cannot be undone.</p>
           <div className="flex gap-2">
             <button
               onClick={handleClearAll}
-              className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+              className="px-4 py-2 text-sm font-medium text-white bg-danger hover:bg-danger/90 rounded-lg transition-colors"
             >
               Clear All
             </button>
             <button
               onClick={() => setShowClearConfirm(false)}
-              className="px-4 py-2 text-sm font-medium text-text-secondary hover:bg-canvas rounded-lg transition-colors"
+              className="px-4 py-2 text-sm font-medium text-text-secondary hover:bg-[#ebe6df] rounded-lg transition-colors"
             >
               Cancel
             </button>
@@ -217,7 +217,7 @@ export function HistoryPage(): React.ReactElement {
               <div
                 key={entry.id}
                 className={`py-4 group transition-colors ${
-                  isShowingRaw ? 'bg-amber-50/30 -mx-0 px-0' : ''
+                  isShowingRaw ? 'bg-warning-subtle/50 -mx-0 px-0' : ''
                 }`}
               >
                 <div className="flex items-start justify-between gap-4">
@@ -268,8 +268,8 @@ export function HistoryPage(): React.ReactElement {
                         }}
                         className={`p-2 rounded-lg transition-colors ${
                           isShowingRaw
-                            ? 'text-amber-500 bg-amber-100'
-                            : 'text-stone-300 hover:text-amber-500 hover:bg-amber-50 opacity-30 hover:opacity-100 focus:opacity-100'
+                            ? 'text-warning bg-warning-subtle'
+                            : 'text-text-muted hover:text-warning hover:bg-warning-subtle opacity-30 hover:opacity-100 focus:opacity-100'
                         }`}
                         title={isShowingRaw ? 'Show refined text' : 'Show original transcription'}
                       >
@@ -286,8 +286,8 @@ export function HistoryPage(): React.ReactElement {
                       onClick={() => copyToClipboard(displayText, entry.id)}
                       className={`p-2 rounded-lg transition-all duration-200 ${
                         copiedId === entry.id
-                          ? 'text-teal-500 bg-teal-50'
-                          : 'text-stone-300 hover:text-accent hover:bg-accent-subtle opacity-30 hover:opacity-100 focus:opacity-100'
+                          ? 'text-accent bg-accent-subtle'
+                          : 'text-text-muted hover:text-accent hover:bg-accent-subtle opacity-30 hover:opacity-100 focus:opacity-100'
                       }`}
                       title={copiedId === entry.id ? 'Copied!' : 'Copy to clipboard'}
                     >
