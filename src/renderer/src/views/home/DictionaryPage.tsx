@@ -41,14 +41,13 @@ export function DictionaryPage(): React.ReactElement {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <section>
-        <h3 className="text-[15px] font-semibold text-text-primary mb-4">Custom Dictionary</h3>
+        <h3 className="text-[15px] font-semibold text-text-primary mb-1">Custom Dictionary</h3>
         <p className="text-sm text-text-secondary mb-4">
           Add word replacements that are automatically applied to transcriptions. Useful for names, technical terms, or common misrecognitions.
         </p>
 
-        {/* Add new entry */}
         <div className="flex items-end gap-2 mb-6">
           <div className="flex-1">
             <label className="block text-xs text-text-muted mb-1">When you say</label>
@@ -57,12 +56,12 @@ export function DictionaryPage(): React.ReactElement {
               value={newFrom}
               onChange={(e) => setNewFrom(e.target.value)}
               placeholder="e.g., tablty"
-              className="w-full px-3 py-1.5 border border-border-custom rounded-lg text-sm text-text-primary bg-surface focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
+              className="w-full px-3 py-2 border border-border-custom rounded-lg text-sm text-text-primary bg-surface focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
               onKeyDown={(e) => { if (e.key === 'Enter') addEntry() }}
               aria-label="Word to replace"
             />
           </div>
-          <svg className="w-4 h-4 text-text-muted mb-2 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="w-4 h-4 text-text-muted mb-2.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
           </svg>
           <div className="flex-1">
@@ -72,7 +71,7 @@ export function DictionaryPage(): React.ReactElement {
               value={newTo}
               onChange={(e) => setNewTo(e.target.value)}
               placeholder="e.g., tabletly"
-              className="w-full px-3 py-1.5 border border-border-custom rounded-lg text-sm text-text-primary bg-surface focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
+              className="w-full px-3 py-2 border border-border-custom rounded-lg text-sm text-text-primary bg-surface focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
               onKeyDown={(e) => { if (e.key === 'Enter') addEntry() }}
               aria-label="Replacement word"
             />
@@ -80,17 +79,21 @@ export function DictionaryPage(): React.ReactElement {
           <button
             onClick={addEntry}
             disabled={!newFrom.trim() || !newTo.trim()}
-            className="px-4 py-1.5 text-sm font-medium text-white bg-accent hover:bg-accent-hover rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="px-4 py-2 text-sm font-medium text-white bg-accent hover:bg-accent-hover rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Add
           </button>
         </div>
 
-        {/* Entries list */}
         {dictionary.length === 0 ? (
-          <div className="py-12 text-center">
-            <p className="text-text-secondary text-sm">No dictionary entries yet</p>
-            <p className="text-text-muted text-xs mt-1">Add words above to auto-fix common misrecognitions</p>
+          <div className="py-16 text-center">
+            <div className="w-12 h-12 rounded-2xl bg-canvas mx-auto mb-4 flex items-center justify-center">
+              <svg className="w-6 h-6 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+              </svg>
+            </div>
+            <p className="text-text-secondary text-sm font-medium">No dictionary entries yet</p>
+            <p className="text-text-muted text-xs mt-1.5">Add words above to auto-fix common misrecognitions</p>
           </div>
         ) : (
           <div className="divide-y divide-border-custom">
@@ -105,7 +108,7 @@ export function DictionaryPage(): React.ReactElement {
                 </div>
                 <button
                   onClick={() => removeEntry(entry.id)}
-                  className="p-1.5 text-text-muted hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors opacity-30 hover:opacity-100 focus:opacity-100"
+                  className="p-1.5 text-text-muted hover:text-danger hover:bg-danger-subtle rounded-lg transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
                   title="Remove"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
