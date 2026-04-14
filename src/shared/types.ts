@@ -120,7 +120,7 @@ export interface WhisperResult {
 }
 
 // Home window page
-export type HomePage = 'general' | 'model' | 'ai' | 'dictionary' | 'history' | 'about'
+export type HomePage = 'general' | 'transcription' | 'dictionary' | 'history'
 
 // Overlay display state
 export interface OverlayState {
