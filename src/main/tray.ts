@@ -36,6 +36,8 @@ export function openHomeWindow(): void {
     minWidth: 680,
     minHeight: 500,
     title: 'Home',
+    titleBarStyle: 'hidden',
+    trafficLightPosition: { x: 16, y: 16 },
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,

@@ -2,6 +2,13 @@ export type LocalModel = 'tiny.en' | 'base.en' | 'small.en' | 'medium.en' | 'lar
 export type RefinementIntensity = 'light' | 'medium' | 'heavy'
 export type LlamaServerStatus = 'stopped' | 'starting' | 'ready' | 'error' | 'crashed'
 
+// Custom dictionary entry for word replacements
+export interface DictionaryEntry {
+  from: string  // The word/phrase as typically transcribed
+  to: string    // The replacement
+  id: string    // Unique ID
+}
+
 // Main settings model
 export interface AppSettings {
   // Transcription
@@ -21,6 +28,7 @@ export interface AppSettings {
   // AI Refinement
   refinementEnabled: boolean
   refinementModelPath: string
+  refinementModelSource: 'manual' | 'downloaded'
   refinementIntensity: RefinementIntensity
 
   // UI
@@ -29,6 +37,9 @@ export interface AppSettings {
 
   // Onboarding
   onboardingComplete: boolean
+
+  // Custom dictionary
+  dictionary: DictionaryEntry[]
 }
 
 // Transcription history entry
@@ -41,6 +52,11 @@ export interface TranscriptionEntry {
   refinedWith?: string
   timestamp: number
   wordCount: number
+  // Metadata
+  transcriptionModel?: string        // e.g., "base.en", "small.en"
+  transcriptionDurationMs?: number   // How long whisper took
+  refinementModel?: string           // e.g., "Llama-3.2-1B"
+  refinementDurationMs?: number      // How long refinement took
 }
 
 // Pipeline state machine context
@@ -52,6 +68,11 @@ export interface PipelineContext {
   rawTranscriptionText: string
   error: AppError | null
   elapsedMs: number
+  // Metadata
+  transcriptionModel?: string
+  transcriptionDurationMs?: number
+  refinementModel?: string
+  refinementDurationMs?: number
 }
 
 // Pipeline states
@@ -64,7 +85,7 @@ export type PipelineEvent =
   | { type: 'CANCEL' }
   | { type: 'AUDIO_DATA'; levels: number[]; durationMs: number }
   | { type: 'AUDIO_BUFFER_READY'; buffer: Float32Array }
-  | { type: 'TRANSCRIPTION_SUCCESS'; text: string; rawText: string }
+  | { type: 'TRANSCRIPTION_SUCCESS'; text: string; rawText: string; transcriptionModel?: string; transcriptionDurationMs?: number; refinementModel?: string; refinementDurationMs?: number }
   | { type: 'TRANSCRIPTION_FAILURE'; error: AppError }
   | { type: 'COMPLETE_ACKNOWLEDGED' }
   | { type: 'ERROR_DISMISSED' }
@@ -99,7 +120,7 @@ export interface WhisperResult {
 }
 
 // Home window page
-export type HomePage = 'general' | 'model' | 'ai' | 'history' | 'about'
+export type HomePage = 'general' | 'model' | 'ai' | 'dictionary' | 'history' | 'about'
 
 // Overlay display state
 export interface OverlayState {

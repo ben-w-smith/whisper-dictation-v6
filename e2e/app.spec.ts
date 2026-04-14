@@ -50,7 +50,7 @@ test.describe('Settings', () => {
     expect(settings).toBeDefined()
     expect(typeof settings.transcriptionProvider).toBe('string')
     expect(typeof settings.localModel).toBe('string')
-    expect(typeof settings.keyboardShortcut).toBe('string')
+    expect(typeof settings.keyboardShortcuts).toBe('object')
     expect(typeof settings.autoPaste).toBe('boolean')
     expect(typeof settings.copyToClipboard).toBe('boolean')
   })

@@ -11,12 +11,32 @@ import { registerIpcHandlers, setTrayRef } from './ipc'
 import { getSettings } from './store'
 import { requestMicrophonePermission } from './permissions'
 import { startLlamaServer, stopLlamaServer, registerPowerMonitor } from './llama'
+import { getGgufModelPath } from './huggingface'
+
+/** Resolve gguf:// paths to absolute filesystem paths. */
+function resolveModelPath(path: string): string {
+  if (path.startsWith('gguf://')) {
+    return getGgufModelPath(path.slice(7))
+  }
+  return path
+}
 
 // Allow AudioContext to start without user gesture — required because recording
 // is triggered by a global hotkey (via IPC), not a direct click in the renderer.
 // Without this, Chromium suspends the AudioContext and resume() fails silently
 // in windows that have never received user interaction (like our hidden background window).
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required')
+
+// Suppress EPIPE errors — when the launching terminal closes its pipe, console.log
+// throws an uncaught EPIPE that crashes the app. Intercept stdout/stderr writes.
+process.stdout.on('error', (err: NodeJS.ErrnoException) => {
+  if (err.code === 'EPIPE') return
+  throw err
+})
+process.stderr.on('error', (err: NodeJS.ErrnoException) => {
+  if (err.code === 'EPIPE') return
+  throw err
+})
 
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
@@ -101,20 +121,17 @@ async function setupHotkeys(): Promise<void> {
     mainWindow?.webContents.send(IPC.HOTKEY_TRIGGERED)
   }
 
-  // Try to register mouse button first if set
+  // Register keyboard shortcuts (always)
+  const keyboardSuccess = registerHotkeys(shortcuts, callback)
+  if (!keyboardSuccess) {
+    console.error('[Main] Failed to register keyboard shortcuts:', shortcuts)
+  }
+
+  // Register mouse button (independently, if set)
   if (mouseButton !== null) {
     const mouseSuccess = registerMouseButton(mouseButton, callback)
     if (!mouseSuccess) {
-      // Fall back to keyboard shortcuts
-      const keyboardSuccess = registerHotkeys(shortcuts, callback)
-      if (!keyboardSuccess) {
-        console.error('[Main] Failed to register keyboard shortcuts:', shortcuts)
-      }
-    }
-  } else {
-    const success = registerHotkeys(shortcuts, callback)
-    if (!success) {
-      console.error('[Main] Failed to register default hotkeys:', shortcuts)
+      console.warn('[Main] Mouse button registration failed — keyboard shortcuts still active')
     }
   }
 }
@@ -142,7 +159,7 @@ app.whenReady().then(() => {
   // Start llama-server if refinement is configured
   getSettings().then((settings) => {
     if (settings.refinementEnabled && settings.refinementModelPath) {
-      startLlamaServer(settings.refinementModelPath).catch((err) => {
+      startLlamaServer(resolveModelPath(settings.refinementModelPath)).catch((err) => {
         console.error('[App] Failed to start llama-server:', err)
       })
     }

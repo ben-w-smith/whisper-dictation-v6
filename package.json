@@ -18,7 +18,7 @@
     "lint": "tsc --noEmit",
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
-    "app": "electron-vite build && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --dir --config.mac.hardenedRuntime=false && open 'dist/mac-arm64/Whisper Dictation.app'",
+    "app": "electron-vite build && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --dir --config.mac.hardenedRuntime=false && \"dist/mac-arm64/Whisper Dictation.app/Contents/MacOS/Whisper Dictation\"",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "screenshot": "npx tsx scripts/screenshot.ts"
@@ -27,6 +27,7 @@
     "@nut-tree-fork/nut-js": "^4.2.0",
     "@xstate/react": "^4.1.0",
     "electron-store": "^10.0.0",
+    "iohook-macos": "github:ben-smith-atg/iohook-macos-fork",
     "keytar": "^7.9.0",
     "xstate": "^5.19.0"
   },
@@ -55,8 +56,9 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "electron",
-      "keytar",
-      "esbuild"
+      "esbuild",
+      "iohook-macos",
+      "keytar"
     ]
   }
 }
