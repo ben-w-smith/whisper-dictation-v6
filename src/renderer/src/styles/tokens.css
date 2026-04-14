@@ -4,23 +4,23 @@
   /* Design tokens as CSS custom properties */
 
   /* Surfaces */
-  --color-canvas: #fafaf9;
+  --color-canvas: #f5f2ef;
   --color-surface: #ffffff;
   --color-overlay: rgba(15, 15, 18, 0.85);
 
   /* Text */
   --color-text-primary: #1c1917;
-  --color-text-secondary: #78716c;
-  --color-text-muted: #a8a29e;
+  --color-text-secondary: #6b6560;
+  --color-text-muted: #9c9590;
 
   /* Accent */
   --color-accent: #0d9488;
   --color-accent-hover: #0f766e;
-  --color-accent-subtle: #f0fdfa;
+  --color-accent-subtle: #e8f5f2;
 
   /* Borders & dividers */
-  --color-border-custom: #e7e5e4;
-  --color-border-hover: #d6d3d1;
+  --color-border-custom: #e0dbd5;
+  --color-border-hover: #d1cbc3;
 
   /* Semantic state colors */
   --color-success: #16a34a;
@@ -29,7 +29,7 @@
   --color-warning-subtle: #fffbeb;
   --color-danger: #dc2626;
   --color-danger-subtle: #fef2f2;
-  --color-info: #3b82f6;
+  --color-info: #0d9488;
   --color-info-subtle: #eff6ff;
 
   /* Pipeline state colors (legacy names kept for overlay compatibility) */
