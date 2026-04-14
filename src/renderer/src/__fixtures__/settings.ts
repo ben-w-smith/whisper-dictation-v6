@@ -1,4 +1,10 @@
-import type { AppSettings } from '@shared/types'
+import type { AppSettings, DictionaryEntry } from '@shared/types'
+
+const sampleDictionary: DictionaryEntry[] = [
+  { id: '1', from: 'tablty', to: 'tabletly' },
+  { id: '2', from: 'whisper', to: 'Whisper' },
+  { id: '3', from: 'electron', to: 'Electron' },
+]
 
 export const defaultSettings: AppSettings = {
   localModel: 'base.en',
@@ -13,6 +19,12 @@ export const defaultSettings: AppSettings = {
   showOverlay: true,
   playSounds: true,
   onboardingComplete: true,
+  dictionary: [],
+}
+
+export const populatedDictionarySettings: AppSettings = {
+  ...defaultSettings,
+  dictionary: sampleDictionary,
 }
 
 export const refinementEnabledSettings: AppSettings = {

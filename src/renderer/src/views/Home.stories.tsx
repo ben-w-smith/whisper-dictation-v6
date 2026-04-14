@@ -24,5 +24,6 @@ type Story = StoryObj<typeof Home>
 export const GeneralPage: Story = { args: { initialPage: 'general' } }
 export const ModelPage: Story = { args: { initialPage: 'model' } }
 export const AIPage: Story = { args: { initialPage: 'ai' } }
+export const DictionaryPage: Story = { args: { initialPage: 'dictionary' } }
 export const HistoryPage: Story = { args: { initialPage: 'history' } }
 export const AboutPage: Story = { args: { initialPage: 'about' } }
