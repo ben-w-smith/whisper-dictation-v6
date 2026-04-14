@@ -43,7 +43,7 @@ export function DictionaryPage(): React.ReactElement {
   return (
     <div className="space-y-6">
       <section>
-        <h3 className="text-[15px] font-semibold text-text-primary mb-4">Custom Dictionary</h3>
+        <h3 className="text-[14px] font-semibold text-text-primary uppercase tracking-wide mb-3">Custom Dictionary</h3>
         <p className="text-sm text-text-secondary mb-4">
           Add word replacements that are automatically applied to transcriptions. Useful for names, technical terms, or common misrecognitions.
         </p>
@@ -105,7 +105,7 @@ export function DictionaryPage(): React.ReactElement {
                 </div>
                 <button
                   onClick={() => removeEntry(entry.id)}
-                  className="p-1.5 text-text-muted hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors opacity-30 hover:opacity-100 focus:opacity-100"
+                  className="p-1.5 text-text-muted hover:text-danger hover:bg-danger-subtle rounded-lg transition-colors opacity-30 hover:opacity-100 focus:opacity-100"
                   title="Remove"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
