@@ -191,7 +191,7 @@ export function AIPage(): React.ReactElement {
                 onClick={() => updateSetting('refinementModelSource', 'downloaded')}
                 className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
                   source === 'downloaded'
-                    ? 'border-accent text-accent'
+                    ? 'border-text-primary text-text-primary'
                     : 'border-transparent text-text-secondary hover:text-text-primary'
                 }`}
               >
@@ -201,7 +201,7 @@ export function AIPage(): React.ReactElement {
                 onClick={() => updateSetting('refinementModelSource', 'manual')}
                 className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
                   source === 'manual'
-                    ? 'border-accent text-accent'
+                    ? 'border-text-primary text-text-primary'
                     : 'border-transparent text-text-secondary hover:text-text-primary'
                 }`}
               >
@@ -214,7 +214,7 @@ export function AIPage(): React.ReactElement {
             <>
               {/* HF Token */}
               <section className="p-4 rounded-xl border border-border-custom bg-surface space-y-3">
-                <h3 className="text-[15px] font-semibold text-text-primary">
+                <h3 className="text-[14px] font-semibold text-text-primary uppercase tracking-wide">
                   Hugging Face Token
                 </h3>
                 <p className="text-xs text-text-secondary">
@@ -253,7 +253,7 @@ export function AIPage(): React.ReactElement {
 
               {/* Curated models */}
               <section className="border-t border-border-custom pt-6">
-                <h3 className="text-[15px] font-semibold text-text-primary mb-4">
+                <h3 className="text-[14px] font-semibold text-text-primary uppercase tracking-wide mb-3">
                   Recommended Models
                 </h3>
                 <div className="space-y-3">
@@ -325,7 +325,7 @@ export function AIPage(): React.ReactElement {
               <section className="border-t border-border-custom pt-6">
                 <button
                   onClick={() => setSearchExpanded(!searchExpanded)}
-                  className="flex items-center gap-2 text-[15px] font-semibold text-text-primary hover:text-text-primary transition-colors w-full"
+                  className="flex items-center gap-2 text-[14px] font-semibold text-text-primary uppercase tracking-wide hover:text-text-primary transition-colors w-full"
                 >
                   <svg
                     className={`w-4 h-4 transition-transform ${searchExpanded ? 'rotate-90' : ''}`}
@@ -419,7 +419,7 @@ export function AIPage(): React.ReactElement {
 
           {source === 'manual' && (
             <section>
-              <h3 className="text-[15px] font-semibold text-text-primary mb-2">
+              <h3 className="text-[14px] font-semibold text-text-primary uppercase tracking-wide mb-2">
                 Model File (GGUF)
               </h3>
               <p className="text-xs text-text-secondary mb-3">
@@ -446,7 +446,7 @@ export function AIPage(): React.ReactElement {
 
           {/* Intensity */}
           <section className="border-t border-border-custom pt-6">
-            <h3 className="text-[15px] font-semibold text-text-primary mb-4">
+            <h3 className="text-[14px] font-semibold text-text-primary uppercase tracking-wide mb-3">
               Intensity
             </h3>
             <div className="space-y-3">
