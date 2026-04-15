@@ -155,7 +155,7 @@ export function HistoryPage(): React.ReactElement {
           <button
             onClick={() => setShowClearConfirm(true)}
             aria-label="Clear all history"
-            className="px-3 py-2 text-xs font-medium text-text-muted hover:text-danger hover:bg-danger-subtle rounded-lg transition-colors"
+            className="cursor-pointer px-3 py-2 text-xs font-medium text-text-muted hover:text-danger hover:bg-danger-subtle rounded-lg transition-colors"
           >
             Clear All
           </button>
@@ -168,13 +168,13 @@ export function HistoryPage(): React.ReactElement {
           <div className="flex gap-2">
             <button
               onClick={handleClearAll}
-              className="px-4 py-2 text-sm font-medium text-white bg-danger hover:bg-danger/90 rounded-lg transition-colors"
+              className="cursor-pointer px-4 py-2 text-sm font-medium text-white bg-danger hover:bg-danger/90 rounded-lg transition-colors"
             >
               Clear All
             </button>
             <button
               onClick={() => setShowClearConfirm(false)}
-              className="px-4 py-2 text-sm font-medium text-text-secondary hover:bg-[#ebe6df] rounded-lg transition-colors"
+              className="cursor-pointer px-4 py-2 text-sm font-medium text-text-secondary hover:bg-surface-hover rounded-lg transition-colors"
             >
               Cancel
             </button>
@@ -183,7 +183,7 @@ export function HistoryPage(): React.ReactElement {
       )}
 
       {stats && (
-        <div className="text-sm text-text-muted">{stats.totalWords.toLocaleString()} words across {stats.sessions} sessions</div>
+        <div className="text-sm text-text-muted pb-1">{stats.totalWords.toLocaleString()} words across {stats.sessions} sessions</div>
       )}
 
       {filteredHistory.length === 0 ? (
@@ -222,7 +222,7 @@ export function HistoryPage(): React.ReactElement {
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
-                    <p className="text-text-primary leading-relaxed whitespace-pre-wrap text-[13px]">
+                    <p className="text-text-primary leading-relaxed whitespace-pre-wrap text-[13px] font-normal max-h-40 overflow-y-auto">
                       {displayText}
                     </p>
                     <div className="flex items-center gap-1.5 mt-2.5">
@@ -252,7 +252,7 @@ export function HistoryPage(): React.ReactElement {
                       </div>
                     )}
                   </div>
-                  <div className="flex items-center gap-0.5 mt-0.5">
+                  <div className="flex items-center gap-1 mt-0.5">
                     {hasRefinement && (
                       <button
                         onClick={() => {
@@ -266,12 +266,13 @@ export function HistoryPage(): React.ReactElement {
                             return next
                           })
                         }}
-                        className={`p-2 rounded-lg transition-colors ${
+                        className={`cursor-pointer p-2 rounded-lg transition-colors ${
                           isShowingRaw
                             ? 'text-warning bg-warning-subtle'
                             : 'text-text-muted hover:text-warning hover:bg-warning-subtle opacity-30 hover:opacity-100 focus:opacity-100'
                         }`}
                         title={isShowingRaw ? 'Show refined text' : 'Show original transcription'}
+                        aria-label={isShowingRaw ? 'Show refined text' : 'Show original transcription'}
                       >
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           {isShowingRaw ? (
@@ -284,12 +285,13 @@ export function HistoryPage(): React.ReactElement {
                     )}
                     <button
                       onClick={() => copyToClipboard(displayText, entry.id)}
-                      className={`p-2 rounded-lg transition-all duration-200 ${
+                      className={`cursor-pointer p-2 rounded-lg transition-all duration-200 ${
                         copiedId === entry.id
                           ? 'text-accent bg-accent-subtle'
                           : 'text-text-muted hover:text-accent hover:bg-accent-subtle opacity-30 hover:opacity-100 focus:opacity-100'
                       }`}
                       title={copiedId === entry.id ? 'Copied!' : 'Copy to clipboard'}
+                      aria-label={copiedId === entry.id ? 'Copied' : 'Copy to clipboard'}
                     >
                       {copiedId === entry.id ? (
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

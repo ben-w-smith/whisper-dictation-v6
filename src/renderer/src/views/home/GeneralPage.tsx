@@ -80,9 +80,85 @@ export function GeneralPage(): React.ReactElement {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-[var(--spacing-section)]">
       <section>
-        <h3 className="text-[14px] font-semibold text-text-primary uppercase tracking-wide mb-3">Audio Input</h3>
+        <h3 className="text-sm font-semibold text-text-primary mb-3">Shortcuts</h3>
+        <div className="text-sm text-text-secondary mb-4">
+          Press your shortcut to start recording, press again to stop.
+        </div>
+
+        <div className="space-y-4">
+          {/* Mouse Button */}
+          <div>
+            <div className="text-[11px] font-semibold text-text-muted uppercase tracking-wide mb-2">Mouse Button</div>
+            <ShortcutRecorder
+              value={null}
+              mouseButton={settings.mouseButton}
+              onChange={(_keyboard, mouse) => {
+                if (mouse !== null) {
+                  updateSetting('mouseButton', mouse)
+                } else {
+                  updateSetting('mouseButton', null)
+                }
+              }}
+              allowMouse={true}
+              allowKeyboard={false}
+            />
+          </div>
+
+          {/* Keyboard Shortcuts */}
+          <div>
+            <div className="text-[11px] font-semibold text-text-muted uppercase tracking-wide mb-2">Keyboard</div>
+            <div className="space-y-2">
+              {(settings.keyboardShortcuts ?? []).map((shortcut, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <ShortcutRecorder
+                    value={shortcut || null}
+                    mouseButton={null}
+                    onChange={(keyboard, _mouse) => {
+                      if (keyboard) {
+                        const updated = [...settings.keyboardShortcuts]
+                        updated[index] = keyboard
+                        updateSetting('keyboardShortcuts', updated)
+                      } else {
+                        const updated = settings.keyboardShortcuts.filter((_, i) => i !== index)
+                        updateSetting('keyboardShortcuts', updated.length ? updated : [''])
+                      }
+                    }}
+                    allowMouse={false}
+                    allowKeyboard={true}
+                  />
+                  {(settings.keyboardShortcuts ?? []).length > 1 && (
+                    <button
+                      onClick={() => {
+                        const updated = settings.keyboardShortcuts.filter((_, i) => i !== index)
+                        updateSetting('keyboardShortcuts', updated)
+                      }}
+                      className="p-2 text-text-muted hover:text-text-primary hover:bg-surface-hover rounded-lg transition-colors cursor-pointer"
+                      aria-label="Remove shortcut"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              ))}
+              <button
+                onClick={() => {
+                  updateSetting('keyboardShortcuts', [...settings.keyboardShortcuts, ''])
+                }}
+                className="text-sm text-accent hover:text-accent-hover font-medium transition-colors"
+              >
+                + Add Shortcut
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h3 className="text-sm font-semibold text-text-primary mb-3">Audio Input</h3>
 
         {micPermission === 'denied' && (
           <div className="flex items-start gap-3 p-3 mb-3 bg-danger-subtle border border-danger/20 rounded-lg">
@@ -119,7 +195,7 @@ export function GeneralPage(): React.ReactElement {
           </div>
         )}
 
-        <div className="flex items-center justify-between py-2">
+        <div className="flex items-center justify-between py-3">
           <div>
             <div className="flex items-center gap-2">
               <div className="text-text-primary font-medium">Microphone</div>
@@ -164,7 +240,7 @@ export function GeneralPage(): React.ReactElement {
       </section>
 
       <section>
-        <h3 className="text-[14px] font-semibold text-text-primary uppercase tracking-wide mb-3">Output</h3>
+        <h3 className="text-sm font-semibold text-text-primary mb-3">Output</h3>
         <div className="space-y-4">
           <div className="flex items-center justify-between py-3">
             <div>
@@ -174,6 +250,7 @@ export function GeneralPage(): React.ReactElement {
             <ToggleSwitch
               checked={settings.copyToClipboard}
               onChange={(checked) => updateSetting('copyToClipboard', checked)}
+              label="Copy to clipboard"
             />
           </div>
           <div className="flex items-center justify-between py-3">
@@ -184,6 +261,7 @@ export function GeneralPage(): React.ReactElement {
             <ToggleSwitch
               checked={settings.autoPaste}
               onChange={(checked) => updateSetting('autoPaste', checked)}
+              label="Auto-paste"
             />
           </div>
           <div className="flex items-center justify-between py-3">
@@ -194,6 +272,7 @@ export function GeneralPage(): React.ReactElement {
             <ToggleSwitch
               checked={settings.playSounds}
               onChange={(checked) => updateSetting('playSounds', checked)}
+              label="Play sounds"
             />
           </div>
           <div className="flex items-center justify-between py-3">
@@ -204,69 +283,8 @@ export function GeneralPage(): React.ReactElement {
             <ToggleSwitch
               checked={settings.showOverlay}
               onChange={(checked) => updateSetting('showOverlay', checked)}
+              label="Show overlay"
             />
-          </div>
-        </div>
-      </section>
-
-      <section>
-        <h3 className="text-[14px] font-semibold text-text-primary uppercase tracking-wide mb-3">Shortcuts</h3>
-        <div>
-          <div className="text-sm text-text-secondary mb-3">
-            Press your shortcut to start recording, press again to stop.
-          </div>
-          <div className="space-y-2">
-            {(settings.keyboardShortcuts ?? []).map((shortcut, index) => (
-              <div key={index} className="flex items-center gap-2">
-                <ShortcutRecorder
-                  value={shortcut}
-                  mouseButton={index === 0 ? settings.mouseButton : null}
-                  onChange={(keyboard, mouse) => {
-                    // Mouse button captured
-                    if (typeof mouse === 'number' && index === 0) {
-                      updateSetting('mouseButton', mouse)
-                      return
-                    }
-                    // Keyboard shortcut captured
-                    if (keyboard) {
-                      const updated = [...settings.keyboardShortcuts]
-                      updated[index] = keyboard
-                      updateSetting('keyboardShortcuts', updated)
-                      return
-                    }
-                    // Clear: both null
-                    if (index === 0) {
-                      updateSetting('mouseButton', null)
-                    } else {
-                      const updated = settings.keyboardShortcuts.filter((_, i) => i !== index)
-                      updateSetting('keyboardShortcuts', updated)
-                    }
-                  }}
-                />
-                {(settings.keyboardShortcuts ?? []).length > 1 && (
-                  <button
-                    onClick={() => {
-                      const updated = settings.keyboardShortcuts.filter((_, i) => i !== index)
-                      updateSetting('keyboardShortcuts', updated)
-                    }}
-                    className="p-2 text-text-muted hover:text-text-primary hover:bg-[#ebe6df] rounded-lg transition-colors"
-                    aria-label="Remove shortcut"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
-                )}
-              </div>
-            ))}
-            <button
-              onClick={() => {
-                updateSetting('keyboardShortcuts', [...settings.keyboardShortcuts, ''])
-              }}
-              className="text-sm text-accent hover:text-accent-hover font-medium transition-colors"
-            >
-              + Add Shortcut
-            </button>
           </div>
         </div>
       </section>

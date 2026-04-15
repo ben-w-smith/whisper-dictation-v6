@@ -21,6 +21,7 @@ export function ModelPage(): React.ReactElement {
     'large-v3': 0,
   })
   const [downloading, setDownloading] = useState<LocalModel | null>(null)
+  const [downloadError, setDownloadError] = useState<string | null>(null)
   const [downloadedModels, setDownloadedModels] = useState<Set<LocalModel>>(new Set())
   useEffect(() => {
     const loadSettings = async () => {
@@ -57,14 +58,39 @@ export function ModelPage(): React.ReactElement {
 
   const handleDownload = async (model: LocalModel) => {
     setDownloading(model)
+    setDownloadError(null)
     setDownloadProgress((prev) => ({ ...prev, [model]: 0 }))
-    await window.api.invoke(IPC.DOWNLOAD_MODEL, model)
+    try {
+      await window.api.invoke(IPC.DOWNLOAD_MODEL, model)
+    } catch (err) {
+      setDownloading(null)
+      setDownloadError(`Failed to download ${MODEL_INFO[model].name}: ${err instanceof Error ? err.message : 'Unknown error'}`)
+    }
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-[var(--spacing-section)]">
       <section>
-        <h3 className="text-[14px] font-semibold text-text-primary uppercase tracking-wide mb-3">Local Model</h3>
+        <h3 className="text-sm font-semibold text-text-primary mb-3">Local Model</h3>
+        {downloadError && (
+          <div className="flex items-start gap-2 p-3 mb-3 bg-danger-subtle border border-danger/20 rounded-lg">
+            <svg className="w-4 h-4 text-danger shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <div className="flex-1">
+              <span className="text-sm text-danger">{downloadError}</span>
+            </div>
+            <button
+              onClick={() => setDownloadError(null)}
+              className="text-danger/60 hover:text-danger"
+              aria-label="Dismiss error"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        )}
         <div className="space-y-3">
           {(Object.keys(MODEL_INFO) as LocalModel[]).map((model) => {
             const info = MODEL_INFO[model]
@@ -89,8 +115,9 @@ export function ModelPage(): React.ReactElement {
                         name="local-model"
                         id={model}
                         checked={isSelected}
-                        onChange={() => updateSetting('localModel', model)}
-                        className="w-4 h-4 text-accent focus:ring-accent"
+                        onChange={() => isDownloaded && updateSetting('localModel', model)}
+                        disabled={!isDownloaded}
+                        className="w-4 h-4 text-accent focus:ring-accent disabled:opacity-50"
                       />
                       <label htmlFor={model} className="cursor-pointer">
                         <div className="font-medium text-text-primary">{info.name}</div>

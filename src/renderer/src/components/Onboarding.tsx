@@ -100,7 +100,7 @@ export function Onboarding({ onComplete, initialStep = 1 }: OnboardingProps): Re
         {/* Skip button */}
         <button
           onClick={handleSkip}
-          className="absolute top-0 right-0 text-text-secondary hover:text-text-primary transition-colors"
+          className="absolute top-0 right-0 p-1 text-text-secondary hover:text-text-primary transition-colors"
         >
           Skip
         </button>
@@ -112,13 +112,13 @@ export function Onboarding({ onComplete, initialStep = 1 }: OnboardingProps): Re
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
               </svg>
             </div>
-            <h1 className="text-3xl font-semibold text-text-primary mb-2">Welcome to Whisper Dictation</h1>
-            <p className="text-lg text-text-secondary mb-8">
+            <h1 className="text-3xl font-bold text-text-primary tracking-tight mb-1">Welcome to Whisper Dictation</h1>
+            <p className="text-base text-text-secondary mb-8">
               Fast, private voice dictation for macOS powered by local AI
             </p>
             <button
               onClick={() => setStep(2)}
-              className="px-8 py-3 bg-accent hover:bg-accent-hover text-white font-medium rounded-xl transition-colors"
+              className="px-8 py-3 bg-accent hover:bg-accent-hover text-white font-medium rounded-lg transition-colors"
             >
               Get Started
             </button>
@@ -127,7 +127,7 @@ export function Onboarding({ onComplete, initialStep = 1 }: OnboardingProps): Re
 
         {step === 2 && (
           <div>
-            <h2 className="text-2xl font-semibold text-text-primary mb-2">Permissions & Shortcut</h2>
+            <h2 className="text-2xl font-bold text-text-primary tracking-tight mb-2">Permissions & Shortcut</h2>
             <p className="text-text-secondary mb-6">Let's set up the essentials</p>
 
             <div className="space-y-4 mb-6">
@@ -225,7 +225,7 @@ export function Onboarding({ onComplete, initialStep = 1 }: OnboardingProps): Re
 
         {step === 3 && (
           <div>
-            <h2 className="text-2xl font-semibold text-text-primary mb-2">Choose Your Model</h2>
+            <h2 className="text-2xl font-bold text-text-primary tracking-tight mb-2">Choose Your Model</h2>
             <p className="text-text-secondary mb-6">Select a Whisper model for transcription</p>
 
             <div className="space-y-3 mb-6">

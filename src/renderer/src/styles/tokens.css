@@ -1,11 +1,34 @@
 @import "tailwindcss";
 
+/* ── DM Sans (variable, latin + latin-ext) ── */
+@font-face {
+  font-family: 'DM Sans';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('../assets/fonts/DMSans-VariableLatinExt.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'DM Sans';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('../assets/fonts/DMSans-Variable.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 @theme {
   /* Design tokens as CSS custom properties */
 
+  /* Font families */
+  --font-sans: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+
   /* Surfaces */
-  --color-canvas: #f5f2ef;
-  --color-surface: #ffffff;
+  --color-canvas: #f0ece8;
+  --color-surface: #faf8f6;
+  --color-surface-hover: #ebe6df;
+  --color-surface-active: #e5e0d8;
   --color-overlay: rgba(15, 15, 18, 0.85);
 
   /* Text */
@@ -16,11 +39,15 @@
   /* Accent */
   --color-accent: #0d9488;
   --color-accent-hover: #0f766e;
-  --color-accent-subtle: #e8f5f2;
+  --color-accent-subtle: #e6f2ef;
 
   /* Borders & dividers */
   --color-border-custom: #e0dbd5;
   --color-border-hover: #d1cbc3;
+
+  /* Component-specific */
+  --color-toggle-off: #d6d1ca;
+  --color-recorder-border: #c4bdb4;
 
   /* Semantic state colors */
   --color-success: #16a34a;
@@ -30,7 +57,7 @@
   --color-danger: #dc2626;
   --color-danger-subtle: #fef2f2;
   --color-info: #0d9488;
-  --color-info-subtle: #eff6ff;
+  --color-info-subtle: #e6f2ef;
 
   /* Pipeline state colors (legacy names kept for overlay compatibility) */
   --color-recording: #ef4444;
@@ -41,8 +68,26 @@
   /* Focus */
   --color-focus-ring: rgba(13, 148, 136, 0.3);
 
-  /* Spacing */
-  --spacing-section: 24px;
+  /* Spacing scale */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-2xl: 32px;
+  --space-3xl: 48px;
+
+  /* Semantic spacing */
+  --spacing-section: 24px;    /* gap between top-level sections */
+  --spacing-row: 12px;        /* vertical padding for settings rows */
+  --spacing-card: 16px;       /* internal card padding */
+  --spacing-page: 20px;       /* page content area padding */
+
+  /* Border radius */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
 }
 
 /* Tailwind utility extensions */
@@ -66,12 +111,28 @@
   background-color: var(--color-surface);
 }
 
+@utility bg-surface-hover {
+  background-color: var(--color-surface-hover);
+}
+
+@utility bg-surface-active {
+  background-color: var(--color-surface-active);
+}
+
 @utility bg-overlay {
   background-color: var(--color-overlay);
 }
 
 @utility bg-accent-subtle {
   background-color: var(--color-accent-subtle);
+}
+
+@utility bg-toggle-off {
+  background-color: var(--color-toggle-off);
+}
+
+@utility border-recorder-border {
+  border-color: var(--color-recorder-border);
 }
 
 @utility border-border-custom {
@@ -145,13 +206,22 @@
   box-sizing: border-box;
 }
 
+html,
+body,
+#root {
+  background: transparent;
+}
+
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: var(--font-sans);
+  font-size: 0.875rem;     /* 14px base for compact app UI */
+  line-height: 1.5;
+  font-weight: 400;
+  color: var(--color-text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-kerning: normal;
 }
 
 /* Utility classes for text clamping */

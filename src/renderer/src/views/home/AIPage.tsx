@@ -31,7 +31,7 @@ export function AIPage(): React.ReactElement {
   const [downloadedGguf, setDownloadedGguf] = useState<DownloadedGgufModel[]>([])
   const [downloadingFile, setDownloadingFile] = useState<string | null>(null)
   const [downloadProgress, setDownloadProgress] = useState<Record<string, number>>({})
-
+  const [downloadError, setDownloadError] = useState<string | null>(null)
   // Search state
   const [searchExpanded, setSearchExpanded] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -82,7 +82,7 @@ export function AIPage(): React.ReactElement {
     const unsubError = window.api.on(IPC.HF_DOWNLOAD_ERROR, (data: unknown) => {
       const e = data as { filename: string; error: string }
       setDownloadingFile(null)
-      console.error('GGUF download error:', e.error)
+      setDownloadError(`Download failed: ${e.error}`)
     })
 
     return () => {
@@ -106,23 +106,25 @@ export function AIPage(): React.ReactElement {
 
   const handleDownloadCurated = async (model: typeof CURATED_GGUF_MODELS[number]) => {
     setDownloadingFile(model.filename)
+    setDownloadError(null)
     setDownloadProgress((prev) => ({ ...prev, [model.filename]: 0 }))
     try {
       await window.api.invoke(IPC.HF_DOWNLOAD_GGUF, model.repoId, model.filename, model.id)
     } catch (err) {
       setDownloadingFile(null)
-      console.error('Download failed:', err)
+      setDownloadError(`Failed to download ${model.name}: ${err instanceof Error ? err.message : 'Unknown error'}`)
     }
   }
 
   const handleDownloadSearch = async (repoId: string, filename: string) => {
     setDownloadingFile(filename)
+    setDownloadError(null)
     setDownloadProgress((prev) => ({ ...prev, [filename]: 0 }))
     try {
       await window.api.invoke(IPC.HF_DOWNLOAD_GGUF, repoId, filename, null)
     } catch (err) {
       setDownloadingFile(null)
-      console.error('Download failed:', err)
+      setDownloadError(`Failed to download ${filename}: ${err instanceof Error ? err.message : 'Unknown error'}`)
     }
   }
 
@@ -167,23 +169,41 @@ export function AIPage(): React.ReactElement {
   const source = settings.refinementModelSource
 
   return (
-    <div className="space-y-6">
-      {/* Enable toggle */}
-      <section className="flex items-center justify-between p-4 rounded-xl border border-border-custom bg-surface">
+    <div className="space-y-[var(--spacing-section)]">
+      {/* Enable toggle — simple row, not a card */}
+      <section className="flex items-center justify-between py-3">
         <div>
-          <h3 className="font-medium text-text-primary">AI Refinement</h3>
-          <p className="text-sm text-text-secondary mt-1">
-            Clean up transcription with a local AI model
-          </p>
+          <div className="text-text-primary font-medium">AI Refinement</div>
+          <div className="text-sm text-text-secondary">Clean up transcription with a local AI model</div>
         </div>
         <ToggleSwitch
           checked={settings.refinementEnabled}
           onChange={(checked) => updateSetting('refinementEnabled', checked)}
+          label="AI Refinement"
         />
       </section>
 
       {settings.refinementEnabled && (
         <>
+          {/* Download error banner */}
+          {downloadError && (
+            <div className="flex items-start gap-2 p-3 bg-danger-subtle border border-danger/20 rounded-lg">
+              <svg className="w-4 h-4 text-danger shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <span className="text-sm text-danger flex-1">{downloadError}</span>
+              <button
+                onClick={() => setDownloadError(null)}
+                className="text-danger/60 hover:text-danger"
+                aria-label="Dismiss error"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          )}
+
           {/* Source tabs */}
           <section>
             <div className="flex border-b border-border-custom">
@@ -213,11 +233,11 @@ export function AIPage(): React.ReactElement {
           {source === 'downloaded' && (
             <>
               {/* HF Token */}
-              <section className="p-4 rounded-xl border border-border-custom bg-surface space-y-3">
-                <h3 className="text-[14px] font-semibold text-text-primary uppercase tracking-wide">
+              <section>
+                <h3 className="text-[11px] font-semibold text-text-muted uppercase tracking-wide mb-2">
                   Hugging Face Token
                 </h3>
-                <p className="text-xs text-text-secondary">
+                <p className="text-xs text-text-secondary mb-3">
                   Required for downloading models. Some models need a token to accept their license first.
                 </p>
                 {hfTokenSaved && !showTokenInput ? (
@@ -252,8 +272,8 @@ export function AIPage(): React.ReactElement {
               </section>
 
               {/* Curated models */}
-              <section className="border-t border-border-custom pt-6">
-                <h3 className="text-[14px] font-semibold text-text-primary uppercase tracking-wide mb-3">
+              <section>
+                <h3 className="text-sm font-semibold text-text-primary mb-3">
                   Recommended Models
                 </h3>
                 <div className="space-y-3">
@@ -322,10 +342,10 @@ export function AIPage(): React.ReactElement {
               </section>
 
               {/* Search */}
-              <section className="border-t border-border-custom pt-6">
+              <section>
                 <button
                   onClick={() => setSearchExpanded(!searchExpanded)}
-                  className="flex items-center gap-2 text-[14px] font-semibold text-text-primary uppercase tracking-wide hover:text-text-primary transition-colors w-full"
+                  className="flex items-center gap-2 text-[11px] font-semibold text-text-muted uppercase tracking-wide hover:text-text-primary transition-colors w-full"
                 >
                   <svg
                     className={`w-4 h-4 transition-transform ${searchExpanded ? 'rotate-90' : ''}`}
@@ -419,7 +439,7 @@ export function AIPage(): React.ReactElement {
 
           {source === 'manual' && (
             <section>
-              <h3 className="text-[14px] font-semibold text-text-primary uppercase tracking-wide mb-2">
+              <h3 className="text-[11px] font-semibold text-text-muted uppercase tracking-wide mb-2">
                 Model File (GGUF)
               </h3>
               <p className="text-xs text-text-secondary mb-3">
@@ -430,23 +450,30 @@ export function AIPage(): React.ReactElement {
                 value={settings.refinementModelPath}
                 onChange={(e) => updateSetting('refinementModelPath', e.target.value)}
                 placeholder="/path/to/model.gguf"
-                className="w-full px-4 py-3 border border-border-custom rounded-xl focus:outline-none focus:ring-2 focus:ring-accent bg-surface font-mono text-sm"
+                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 bg-surface font-mono text-sm ${
+                  settings.refinementModelPath && !settings.refinementModelPath.endsWith('.gguf')
+                    ? 'border-warning focus:ring-warning'
+                    : 'border-border-custom focus:ring-accent'
+                }`}
                 spellCheck={false}
               />
+              {settings.refinementModelPath && !settings.refinementModelPath.endsWith('.gguf') && (
+                <p className="text-xs text-warning mt-1.5">Path should end with .gguf</p>
+              )}
             </section>
           )}
 
           {/* Server status */}
-          <section className="flex items-center justify-between py-2">
+          <section className="flex items-center justify-between py-3">
             <span className="text-sm text-text-secondary">llama-server status</span>
             <span className={`text-sm font-medium ${statusInfo.color}`}>
               {statusInfo.label}
             </span>
           </section>
 
-          {/* Intensity */}
-          <section className="border-t border-border-custom pt-6">
-            <h3 className="text-[14px] font-semibold text-text-primary uppercase tracking-wide mb-3">
+          {/* Intensity — radio rows, not cards */}
+          <section>
+            <h3 className="text-sm font-semibold text-text-primary mb-3">
               Intensity
             </h3>
             <div className="space-y-3">
@@ -454,17 +481,24 @@ export function AIPage(): React.ReactElement {
                 const info = INTENSITY_INFO[intensity]
                 const isSelected = settings.refinementIntensity === intensity
                 return (
-                  <button
+                  <label
                     key={intensity}
-                    onClick={() => updateSetting('refinementIntensity', intensity)}
-                    className={`
-                      w-full p-4 rounded-xl border-2 text-left transition-all
-                      ${isSelected ? 'border-accent bg-accent-subtle' : 'border-border-custom bg-surface hover:border-border-hover'}
-                    `}
+                    className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                      isSelected ? 'border-accent bg-accent-subtle' : 'border-border-custom bg-surface hover:border-border-hover'
+                    }`}
                   >
-                    <div className="font-medium text-text-primary">{info.name}</div>
-                    <div className="text-sm text-text-secondary mt-1">{info.description}</div>
-                  </button>
+                    <input
+                      type="radio"
+                      name="intensity"
+                      checked={isSelected}
+                      onChange={() => updateSetting('refinementIntensity', intensity)}
+                      className="w-4 h-4 text-accent focus:ring-accent"
+                    />
+                    <div>
+                      <div className="font-medium text-text-primary text-sm">{info.name}</div>
+                      <div className="text-xs text-text-secondary">{info.description}</div>
+                    </div>
+                  </label>
                 )
               })}
             </div>
@@ -473,7 +507,7 @@ export function AIPage(): React.ReactElement {
       )}
 
       {!settings.refinementEnabled && (
-        <div className="p-8 rounded-xl border border-border-custom bg-surface text-center">
+        <div className="py-8 text-center">
           <p className="text-text-secondary text-sm">
             Enable refinement and download a model to activate local AI cleanup.
           </p>

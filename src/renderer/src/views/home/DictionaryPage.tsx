@@ -7,6 +7,7 @@ export function DictionaryPage(): React.ReactElement {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS)
   const [newFrom, setNewFrom] = useState('')
   const [newTo, setNewTo] = useState('')
+  const [duplicateError, setDuplicateError] = useState(false)
 
   useEffect(() => {
     const load = async () => {
@@ -22,6 +23,12 @@ export function DictionaryPage(): React.ReactElement {
 
   const addEntry = async () => {
     if (!newFrom.trim() || !newTo.trim()) return
+    const fromTrimmed = newFrom.trim().toLowerCase()
+    if (dictionary.some(e => e.from.toLowerCase() === fromTrimmed)) {
+      setDuplicateError(true)
+      return
+    }
+    setDuplicateError(false)
     const entry: DictionaryEntry = {
       id: crypto.randomUUID(),
       from: newFrom.trim(),
@@ -41,9 +48,9 @@ export function DictionaryPage(): React.ReactElement {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-[var(--spacing-section)]">
       <section>
-        <h3 className="text-[14px] font-semibold text-text-primary uppercase tracking-wide mb-3">Custom Dictionary</h3>
+        <h3 className="text-sm font-semibold text-text-primary mb-3">Custom Dictionary</h3>
         <p className="text-sm text-text-secondary mb-4">
           Add word replacements that are automatically applied to transcriptions. Useful for names, technical terms, or common misrecognitions.
         </p>
@@ -55,7 +62,7 @@ export function DictionaryPage(): React.ReactElement {
             <input
               type="text"
               value={newFrom}
-              onChange={(e) => setNewFrom(e.target.value)}
+              onChange={(e) => { setNewFrom(e.target.value); setDuplicateError(false) }}
               placeholder="e.g., tablty"
               className="w-full px-3 py-1.5 border border-border-custom rounded-lg text-sm text-text-primary bg-surface focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
               onKeyDown={(e) => { if (e.key === 'Enter') addEntry() }}
@@ -85,6 +92,9 @@ export function DictionaryPage(): React.ReactElement {
             Add
           </button>
         </div>
+        {duplicateError && (
+          <p className="text-xs text-danger mb-4">This word already exists in the dictionary.</p>
+        )}
 
         {/* Entries list */}
         {dictionary.length === 0 ? (
@@ -96,12 +106,12 @@ export function DictionaryPage(): React.ReactElement {
           <div className="divide-y divide-border-custom">
             {dictionary.map((entry) => (
               <div key={entry.id} className="flex items-center justify-between py-3 group">
-                <div className="flex items-center gap-3">
-                  <span className="text-sm text-text-primary">{entry.from}</span>
-                  <svg className="w-3 h-3 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <span className="text-sm text-text-primary truncate max-w-[200px]" title={entry.from}>{entry.from}</span>
+                  <svg className="w-3 h-3 text-text-muted shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                   </svg>
-                  <span className="text-sm text-accent font-medium">{entry.to}</span>
+                  <span className="text-sm text-accent font-medium truncate max-w-[200px]" title={entry.to}>{entry.to}</span>
                 </div>
                 <button
                   onClick={() => removeEntry(entry.id)}
