@@ -117,10 +117,6 @@ export function registerIpcHandlers(): void {
         } else {
           onboardingWin.loadFile(join(__dirname, '../renderer/index.html'), { hash: 'onboarding' })
         }
-        onboardingWin.on('page-title-updated', (e) => {
-          e.preventDefault()
-          onboardingWin.setTitle('Onboarding')
-        })
         break
       }
 
@@ -155,11 +151,6 @@ export function registerIpcHandlers(): void {
           } else {
             overlayWin.loadFile(join(__dirname, '../renderer/index.html'), { hash: 'overlay' })
           }
-          // Prevent the HTML <title> from overwriting the window title,
-          // which would break IPC relay lookups that find this window by title.
-          overlayWin.on('page-title-updated', (e) => {
-            e.preventDefault()
-          })
           // showInactive() prevents stealing focus from the user's active app
           overlayWin.once('ready-to-show', () => {
             overlayWin.showInactive()

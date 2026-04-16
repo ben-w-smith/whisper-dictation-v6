@@ -51,10 +51,6 @@ export function openHomeWindow(): void {
   } else {
     win.loadFile(join(__dirname, '../renderer/index.html'), { hash: 'home' })
   }
-  win.on('page-title-updated', (e) => {
-    e.preventDefault()
-    win.setTitle('Home')
-  })
 }
 
 export function openAboutWindow(): void {
@@ -83,10 +79,6 @@ export function openAboutWindow(): void {
   } else {
     win.loadFile(join(__dirname, '../renderer/index.html'), { hash: 'about' })
   }
-  win.on('page-title-updated', (e) => {
-    e.preventDefault()
-    win.setTitle('About')
-  })
 }
 
 export function createTrayMenu(tray: Tray, mainWindow: BrowserWindow): void {
