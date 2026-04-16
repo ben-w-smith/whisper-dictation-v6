@@ -73,14 +73,17 @@ The mapping is handled by `domButtonToMacOS()` in `hotkeys.ts`. Buttons 3+ match
 
 ## Window Architecture (Why Routing Matters)
 
-The app has 4 windows, each with a fixed title used for IPC routing:
+The app has 4 windows, each registered by role in `src/main/windows.ts` for IPC routing:
 
-| Window | Title | Contains |
-|--------|-------|----------|
-| Background | "Whisper Dictation" | XState pipeline, audio capture, hotkey listener |
-| Settings | "Home" | ShortcutRecorder, settings UI |
-| Overlay | "Whisper Overlay" | Waveform display |
-| Onboarding | "Onboarding" | Setup wizard with ShortcutRecorder |
+| Window | Role | Contains |
+|--------|------|----------|
+| Background | `background` | XState pipeline, audio capture, hotkey listener |
+| Settings | `home` | ShortcutRecorder, settings UI |
+| Overlay | `overlay` | Waveform display |
+| Onboarding | `onboarding` | Setup wizard with ShortcutRecorder |
+| About | `about` | Version info |
+
+Use `getWindow(role)`, `sendTo(role, channel, ...args)`, or `broadcast(channel, ...args)` from `src/main/windows.ts`. Do not look up windows by title.
 
 **Critical:** `CAPTURE_MOUSE_BUTTON` must use `event.sender.send()` to route the response back to whichever window initiated the capture (Home or Onboarding). It must NOT send to the background window — ShortcutRecorder isn't there.
 

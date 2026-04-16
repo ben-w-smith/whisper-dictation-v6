@@ -1,9 +1,10 @@
 import { spawn, ChildProcess } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
-import { app, dialog, powerMonitor, BrowserWindow } from 'electron'
+import { app, dialog, powerMonitor } from 'electron'
 import { LLAMA_BIN_PATH, LLAMA_SERVER_PORT, LLAMA_CTX_SIZE } from '@shared/constants'
 import { IPC } from '@shared/ipc'
+import { broadcast as broadcastToWindows } from './windows'
 import type { LlamaServerStatus } from '@shared/types'
 
 const MAX_CONSECUTIVE_FAILURES = 2
@@ -23,11 +24,7 @@ function getBinPath(): string {
 
 function broadcast(status: LlamaServerStatus): void {
   currentStatus = status
-  BrowserWindow.getAllWindows().forEach((win) => {
-    if (!win.isDestroyed()) {
-      win.webContents.send(IPC.LLAMA_SERVER_STATUS, status)
-    }
-  })
+  broadcastToWindows(IPC.LLAMA_SERVER_STATUS, status)
 }
 
 export function getLlamaStatus(): LlamaServerStatus {

@@ -1,8 +1,9 @@
 import https from 'node:https'
 import { existsSync, readFileSync, writeFileSync, unlinkSync, renameSync, mkdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
-import { app, BrowserWindow } from 'electron'
+import { app } from 'electron'
 import { IPC } from '@shared/ipc'
+import { broadcast } from './windows'
 import { GGUF_MODEL_DIR, GGUF_META_FILE } from '@shared/constants'
 import { CURATED_GGUF_MODELS } from '@shared/hf'
 import type { DownloadedGgufModel, GgufMetaFile, HfModelSearchResult } from '@shared/hf'
@@ -36,32 +37,20 @@ function writeMeta(meta: GgufMetaFile): void {
 }
 
 function broadcastProgress(filename: string, loaded: number, total: number): void {
-  BrowserWindow.getAllWindows().forEach((win) => {
-    if (!win.isDestroyed()) {
-      win.webContents.send(IPC.HF_DOWNLOAD_PROGRESS, {
-        filename,
-        loaded,
-        total,
-        percent: total > 0 ? Math.round((loaded / total) * 100) : 0,
-      })
-    }
+  broadcast(IPC.HF_DOWNLOAD_PROGRESS, {
+    filename,
+    loaded,
+    total,
+    percent: total > 0 ? Math.round((loaded / total) * 100) : 0,
   })
 }
 
 function broadcastComplete(filename: string): void {
-  BrowserWindow.getAllWindows().forEach((win) => {
-    if (!win.isDestroyed()) {
-      win.webContents.send(IPC.HF_DOWNLOAD_COMPLETE, { filename })
-    }
-  })
+  broadcast(IPC.HF_DOWNLOAD_COMPLETE, { filename })
 }
 
 function broadcastError(filename: string, error: string): void {
-  BrowserWindow.getAllWindows().forEach((win) => {
-    if (!win.isDestroyed()) {
-      win.webContents.send(IPC.HF_DOWNLOAD_ERROR, { filename, error })
-    }
-  })
+  broadcast(IPC.HF_DOWNLOAD_ERROR, { filename, error })
 }
 
 /** Make an HTTPS GET request with optional Bearer token, following redirects. */
