@@ -14,6 +14,7 @@ import { createError } from '@shared/errors'
 import { checkAllPermissions, requestMicrophonePermission } from './permissions'
 import { openHomeWindow, openAboutWindow } from './tray'
 import { setLastTranscription, updateTrayState } from './tray'
+import { registerWindow, getWindow, sendTo, broadcast } from './windows'
 import { updateShortcuts, registerMouseButton, unregisterMouseButton, pauseHotkey, resumeHotkey, captureMouseButton } from './hotkeys'
 import {
   searchHfModels,
@@ -124,6 +125,7 @@ export function registerIpcHandlers(): void {
             nodeIntegration: false,
           },
         })
+        registerWindow('onboarding', onboardingWin)
 
         const rendererUrl = process.env['ELECTRON_RENDERER_URL']
         if (rendererUrl) {
@@ -161,6 +163,7 @@ export function registerIpcHandlers(): void {
               nodeIntegration: false,
             },
           })
+          registerWindow('overlay', overlayWin)
 
           const rendererUrl = process.env['ELECTRON_RENDERER_URL']
           if (rendererUrl) {

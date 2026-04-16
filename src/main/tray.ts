@@ -1,6 +1,7 @@
 import { Tray, BrowserWindow, Menu, app, clipboard, nativeImage } from 'electron'
 import { join } from 'path'
 import { IPC } from '@shared/ipc'
+import { registerWindow, getWindow } from './windows'
 
 let currentShortcut = 'Alt+Space'
 let lastTranscriptionText = ''
@@ -44,6 +45,7 @@ export function openHomeWindow(): void {
       nodeIntegration: false,
     },
   })
+  registerWindow('home', win)
 
   const url = getRendererUrl('home')
   if (url) {
@@ -77,6 +79,7 @@ export function openAboutWindow(): void {
       nodeIntegration: false,
     },
   })
+  registerWindow('about', win)
 
   const url = getRendererUrl('about')
   if (url) {

@@ -8,6 +8,7 @@ import { APP_NAME, DEFAULT_SETTINGS } from '@shared/constants'
 import { createTrayMenu, updateTrayState } from './tray'
 import { registerHotkeys, registerMouseButton, unregisterHotkeys, updateShortcuts } from './hotkeys'
 import { registerIpcHandlers, setTrayRef } from './ipc'
+import { registerWindow } from './windows'
 import { getSettings } from './store'
 import { requestMicrophonePermission } from './permissions'
 import { startLlamaServer, stopLlamaServer, registerPowerMonitor } from './llama'
@@ -78,6 +79,7 @@ function createWindow(): void {
       nodeIntegration: false,
     }
   })
+  registerWindow('background', mainWindow)
 
   // Prevent Chromium from throttling timers and audio processing in the
   // hidden background window. Without this, the ScriptProcessorNode that
