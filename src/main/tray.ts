@@ -23,9 +23,7 @@ function getRendererUrl(hash?: string): string | null {
 }
 
 export function openHomeWindow(): void {
-  const existing = BrowserWindow.getAllWindows().find(
-    (win) => win.getTitle() === 'Home'
-  )
+  const existing = getWindow('home')
   if (existing) {
     existing.focus()
     return
@@ -60,9 +58,7 @@ export function openHomeWindow(): void {
 }
 
 export function openAboutWindow(): void {
-  const existing = BrowserWindow.getAllWindows().find(
-    (win) => win.getTitle() === 'About'
-  )
+  const existing = getWindow('about')
   if (existing) {
     existing.focus()
     return

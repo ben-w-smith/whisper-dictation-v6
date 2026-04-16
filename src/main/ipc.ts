@@ -58,10 +58,7 @@ export function registerIpcHandlers(): void {
 
   // Relay overlay state updates from background window to overlay window
   ipcMain.on('overlay:state-update', (_event, data: unknown) => {
-    const overlayWin = BrowserWindow.getAllWindows().find(w => w.getTitle() === 'Whisper Overlay')
-    if (overlayWin && !overlayWin.isDestroyed()) {
-      overlayWin.webContents.send('overlay:state-update', data)
-    }
+    sendTo('overlay', 'overlay:state-update', data)
   })
 
   // Update tray icon/tooltip based on pipeline state
@@ -73,40 +70,27 @@ export function registerIpcHandlers(): void {
 
   // Relay overlay dismiss (complete/error click) from overlay window to background window
   ipcMain.on(IPC.OVERLAY_DISMISS, (_event, data: { action: 'COMPLETE_ACKNOWLEDGED' | 'ERROR_DISMISSED' }) => {
-    const bgWin = BrowserWindow.getAllWindows().find(w => w.getTitle() === 'Whisper Dictation')
-    if (bgWin && !bgWin.isDestroyed()) {
-      bgWin.webContents.send(IPC.OVERLAY_DISMISS, data)
-    }
+    sendTo('background', IPC.OVERLAY_DISMISS, data)
   })
 
   // Relay overlay:ready from overlay window to background window so it can push current state
   ipcMain.on(IPC.OVERLAY_READY, () => {
-    const bgWin = BrowserWindow.getAllWindows().find(w => w.getTitle() === 'Whisper Dictation')
-    if (bgWin && !bgWin.isDestroyed()) {
-      bgWin.webContents.send(IPC.OVERLAY_READY)
-    }
+    sendTo('background', IPC.OVERLAY_READY)
   })
 
   // Relay overlay cancel from overlay window to background window
   ipcMain.on(IPC.OVERLAY_CANCEL, () => {
-    const bgWin = BrowserWindow.getAllWindows().find(w => w.getTitle() === 'Whisper Dictation')
-    if (bgWin && !bgWin.isDestroyed()) {
-      bgWin.webContents.send(IPC.OVERLAY_CANCEL)
-    }
+    sendTo('background', IPC.OVERLAY_CANCEL)
   })
 
   // Window mode management — renderer tells main how to display the main window
   ipcMain.handle(IPC.SET_WINDOW_MODE, (_event, mode: WindowMode): void => {
-    const wins = BrowserWindow.getAllWindows()
     const { width: screenWidth } = screen.getPrimaryDisplay().workAreaSize
-
-    // Find the main background window (title = APP_NAME)
-    const mainWin = wins.find(w => w.getTitle() === 'Whisper Dictation')
 
     switch (mode) {
       case 'onboarding': {
         // Open a dedicated onboarding window (separate from the hidden background window)
-        const existing = wins.find(w => w.getTitle() === 'Onboarding')
+        const existing = getWindow('onboarding')
         if (existing) {
           existing.focus()
           return
@@ -142,7 +126,7 @@ export function registerIpcHandlers(): void {
 
       case 'overlay': {
         // Show or create the overlay window
-        let overlayWin = wins.find(w => w.getTitle() === 'Whisper Overlay')
+        let overlayWin = getWindow('overlay')
         if (!overlayWin) {
           overlayWin = new BrowserWindow({
             width: 240,
@@ -188,7 +172,7 @@ export function registerIpcHandlers(): void {
 
       case 'hidden': {
         // Hide overlay window if it exists
-        const overlayWin = wins.find(w => w.getTitle() === 'Whisper Overlay')
+        const overlayWin = getWindow('overlay')
         overlayWin?.hide()
         break
       }
@@ -206,7 +190,7 @@ export function registerIpcHandlers(): void {
 
     // Re-register shortcuts when keyboard or mouse shortcut settings change
     if (key === 'keyboardShortcuts' || key === 'mouseButton') {
-      const mainWin = BrowserWindow.getAllWindows().find(w => w.getTitle() === 'Whisper Dictation')
+      const mainWin = getWindow('background')
       if (mainWin) {
         const updatedSettings = await getSettings()
         const callback = () => {
@@ -237,9 +221,7 @@ export function registerIpcHandlers(): void {
     }
 
     // Notify all windows of settings update
-    BrowserWindow.getAllWindows().forEach((win) => {
-      win.webContents.send(IPC.SETTINGS_UPDATED, { key, value })
-    })
+    broadcast(IPC.SETTINGS_UPDATED, { key, value })
   })
 
   // Start transcription — receives base64-encoded WAV from renderer
@@ -263,11 +245,7 @@ export function registerIpcHandlers(): void {
         model,
         options: {
           onProgress: (message: string) => {
-            BrowserWindow.getAllWindows().forEach((win) => {
-              if (!win.isDestroyed()) {
-                win.webContents.send(IPC.DOWNLOAD_PROGRESS, { message })
-              }
-            })
+            broadcast(IPC.DOWNLOAD_PROGRESS, { message })
           },
         },
       })
@@ -322,28 +300,20 @@ export function registerIpcHandlers(): void {
         refinementModel,
         refinementDurationMs,
       })
-      BrowserWindow.getAllWindows().forEach((win) => {
-        if (!win.isDestroyed()) {
-          win.webContents.send(IPC.WHISPER_RESULT, {
-            ...result,
-            text: finalText,
-            rawText: result.text,
-            transcriptionModel: model,
-            transcriptionDurationMs,
-            refinementModel,
-            refinementDurationMs,
-          })
-        }
+      broadcast(IPC.WHISPER_RESULT, {
+        ...result,
+        text: finalText,
+        rawText: result.text,
+        transcriptionModel: model,
+        transcriptionDurationMs,
+        refinementModel,
+        refinementDurationMs,
       })
 
       // Notify renderer if AI refinement was skipped
       if (refinementSkipped) {
-        BrowserWindow.getAllWindows().forEach((win) => {
-          if (!win.isDestroyed()) {
-            win.webContents.send(IPC.REFINEMENT_SKIPPED, {
-              reason: 'Refinement failed or API key not configured, using original transcription',
-            })
-          }
+        broadcast(IPC.REFINEMENT_SKIPPED, {
+          reason: 'Refinement failed or API key not configured, using original transcription',
         })
       }
 
@@ -359,11 +329,7 @@ export function registerIpcHandlers(): void {
           })
 
       // Send error to renderer
-      BrowserWindow.getAllWindows().forEach((win) => {
-        if (!win.isDestroyed()) {
-          win.webContents.send(IPC.WHISPER_ERROR, appError)
-        }
-      })
+      broadcast(IPC.WHISPER_ERROR, appError)
 
       throw appError
     } finally {
@@ -394,11 +360,7 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(IPC.SAVE_HISTORY, (_event, entry: TranscriptionEntry): void => {
     saveHistoryEntry(entry)
     // Notify all windows that history has been updated
-    BrowserWindow.getAllWindows().forEach((win) => {
-      if (!win.isDestroyed()) {
-        win.webContents.send(IPC.HISTORY_UPDATED, entry)
-      }
-    })
+    broadcast(IPC.HISTORY_UPDATED, entry)
   })
 
   // Get transcription history
@@ -457,15 +419,11 @@ export function registerIpcHandlers(): void {
 
     return new Promise((resolve, reject) => {
       const notifyProgress = (loaded: number, total: number) => {
-        BrowserWindow.getAllWindows().forEach((win) => {
-          if (!win.isDestroyed()) {
-            win.webContents.send(IPC.DOWNLOAD_PROGRESS, {
-              model,
-              loaded,
-              total,
-              percent: total > 0 ? Math.round((loaded / total) * 100) : 0,
-            })
-          }
+        broadcast(IPC.DOWNLOAD_PROGRESS, {
+          model,
+          loaded,
+          total,
+          percent: total > 0 ? Math.round((loaded / total) * 100) : 0,
         })
       }
 
@@ -517,11 +475,7 @@ export function registerIpcHandlers(): void {
             renameSync(tempPath, modelPath)
 
             // Notify completion
-            BrowserWindow.getAllWindows().forEach((win) => {
-              if (!win.isDestroyed()) {
-                win.webContents.send(IPC.DOWNLOAD_COMPLETE, model)
-              }
-            })
+            broadcast(IPC.DOWNLOAD_COMPLETE, model)
 
             resolve()
           })
@@ -597,7 +551,7 @@ export function registerIpcHandlers(): void {
 
   // Resume global hotkey after the shortcut recorder closes
   ipcMain.on(IPC.RESUME_HOTKEY, () => {
-    const mainWin = BrowserWindow.getAllWindows().find(w => w.getTitle() === 'Whisper Dictation')
+    const mainWin = getWindow('background')
     if (mainWin) {
       resumeHotkey(() => {
         mainWin.webContents.send(IPC.HOTKEY_TRIGGERED)
@@ -637,7 +591,7 @@ export function registerIpcHandlers(): void {
 
   // Debug: relay debug bus query from any renderer to background window
   ipcMain.handle(IPC.DEBUG_QUERY, async (_event, filter?: { source?: string; event?: string; since?: number }): Promise<unknown[]> => {
-    const bgWin = BrowserWindow.getAllWindows().find(w => w.getTitle() === 'Whisper Dictation')
+    const bgWin = getWindow('background')
     if (!bgWin || bgWin.isDestroyed()) return []
     return await bgWin.webContents.executeJavaScript(
       `window.__debugBus ? window.__debugBus.query(${JSON.stringify(filter ?? {})}) : []`
@@ -661,11 +615,7 @@ export function registerIpcHandlers(): void {
     ipcMain.handle(IPC.TEST_COMPLETE_ONBOARDING, async (): Promise<void> => {
       await setSetting('onboardingComplete' as keyof AppSettings, true as unknown as AppSettings[keyof AppSettings])
       // Notify all windows
-      BrowserWindow.getAllWindows().forEach((win) => {
-        if (!win.isDestroyed()) {
-          win.webContents.send(IPC.SETTINGS_UPDATED, { key: 'onboardingComplete', value: true })
-        }
-      })
+      broadcast(IPC.SETTINGS_UPDATED, { key: 'onboardingComplete', value: true })
     })
   }
 }
