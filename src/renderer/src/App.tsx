@@ -9,6 +9,7 @@ import { IPC } from '@shared/ipc'
 import { getDebugBus } from '@shared/debug'
 import type { AppSettings, AppError } from '@shared/types'
 import { DEFAULT_SETTINGS, WAVEFORM_GRADIENT, WAVEFORM_BAR_COUNT } from '@shared/constants'
+import { useAppearance } from './hooks/useAppearance'
 
 function useHash(): string {
   const [hash, setHash] = useState(window.location.hash)
@@ -20,9 +21,35 @@ function useHash(): string {
   return hash
 }
 
+/**
+ * Loads appearance settings and applies them via useAppearance.
+ * No-ops when `enabled` is false (i.e. the overlay window) to avoid
+ * unnecessary IPC traffic — the overlay is theme-independent per plan §3.5.
+ */
+function useAppearanceBridge(enabled: boolean) {
+  const [appearanceSettings, setAppearanceSettings] = useState<AppSettings | null>(null)
+  useEffect(() => {
+    if (!enabled) return
+    window.api.invoke(IPC.GET_SETTINGS).then((s) => {
+      if (s) setAppearanceSettings(s as AppSettings)
+    }).catch(() => {})
+    const unsub = window.api.on(IPC.SETTINGS_UPDATED, () => {
+      window.api.invoke(IPC.GET_SETTINGS).then((s) => {
+        if (s) setAppearanceSettings(s as AppSettings)
+      }).catch(() => {})
+    })
+    return unsub
+  }, [enabled])
+  useAppearance(enabled ? appearanceSettings : null)
+}
+
 function App(): React.ReactElement {
   const hash = useHash()
   const route = hash.replace(/^#\/?/, '') // "#settings" → "settings", "#/" → ""
+  const isOverlay = route === 'overlay'
+
+  // Overlay is theme-independent — skip all appearance IPC
+  useAppearanceBridge(!isOverlay)
 
   // Standalone pages (opened in their own windows)
   if (route === 'home' || route === 'settings') {
