@@ -26,6 +26,8 @@ function resolveModelPath(path: string): string {
 // is triggered by a global hotkey (via IPC), not a direct click in the renderer.
 // Without this, Chromium suspends the AudioContext and resume() fails silently
 // in windows that have never received user interaction (like our hidden background window).
+// Still needed with AudioWorklet: the worklet module loads through AudioContext,
+// which itself requires a gesture or this policy override.
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required')
 
 // Suppress EPIPE errors — when the launching terminal closes its pipe, console.log
@@ -81,10 +83,10 @@ function createWindow(): void {
   })
   registerWindow('background', mainWindow)
 
-  // Prevent Chromium from throttling timers and audio processing in the
-  // hidden background window. Without this, the ScriptProcessorNode that
-  // captures microphone audio can be paused or rate-limited when the window
-  // is not visible.
+  // Prevent Chromium from throttling timers in the hidden background window.
+  // AudioWorklet runs on a dedicated real-time thread (not affected by throttling),
+  // but the setInterval-based overlay updates and level polling in App.tsx
+  // still need unthrottled timers to maintain ~60fps overlay responsiveness.
   mainWindow.webContents.setBackgroundThrottling(false)
 
   mainWindow.on('closed', () => {

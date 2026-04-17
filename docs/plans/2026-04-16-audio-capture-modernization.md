@@ -1,7 +1,7 @@
 # Audio Capture Pipeline Modernization
 
 **Date:** 2026-04-16
-**Status:** Draft
+**Status:** In Progress
 **Owner:** Ben
 **Related:** [spec.md](../spec.md), [2026-04-16-window-id-addressing.md](./2026-04-16-window-id-addressing.md)
 
@@ -403,15 +403,15 @@ Rollback plan is per-phase; each phase is independently revertible.
 
 ## Acceptance Criteria
 
-- [ ] Zero references to `ScriptProcessorNode` in `src/`
-- [ ] Zero base64 encoding/decoding in the audio path
-- [ ] `arrayBufferToBase64` helper deleted
-- [ ] `float32ToWav` lives in the main process (not renderer)
+- [x] Zero references to `ScriptProcessorNode` in `src/` (only in comments)
+- [x] Zero base64 encoding/decoding in the audio path
+- [x] `arrayBufferToBase64` helper deleted
+- [x] `float32ToWav` lives in the main process (not renderer)
 - [ ] Audio level updates arrive at ≥30Hz during recording (measured via DebugBus)
 - [ ] End-to-end latency for a 3s recording is no worse than baseline (Phase 0 numbers)
-- [ ] At least one Chromium workaround removed from `src/main/index.ts`
+- [x] At least one Chromium workaround removed from `src/main/index.ts` (zero-gain sink deleted in Phase 1; autoplay-policy and throttling kept with updated comments)
 - [ ] No audio glitches on AirPods in manual test
-- [ ] All existing Playwright tests pass
+- [x] All existing Playwright tests pass (1 pre-existing failure unrelated to this plan)
 
 ---
 

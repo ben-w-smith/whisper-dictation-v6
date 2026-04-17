@@ -135,9 +135,9 @@ export class AudioCapture {
     }
 
     // Create audio context at the hardware's native rate (44100 or 48000 Hz on macOS).
-    // Do NOT force 16kHz here — Chromium's internal resampler conflicts with
-    // ScriptProcessorNode, causing onaudioprocess to fire with silent data.
-    // With AudioWorkletNode the conflict may be resolved (Phase 4 audit).
+    // The original ScriptProcessorNode + Chromium internal resampler conflict is
+    // resolved by the AudioWorklet migration, but requesting a non-native rate
+    // can still cause subtle issues. Keep native rate + manual resample for safety.
     // The manual resampleAudio() call in stop() handles the 16kHz conversion for whisper.
     this.audioContext = new AudioContext()
 
