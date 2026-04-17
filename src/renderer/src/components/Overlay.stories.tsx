@@ -1,4 +1,10 @@
-import type { Meta, StoryObj } from '@storybook/react'
+/**
+ * NOTE: Storybook uses a solid dark backdrop. The real overlay is a transparent
+ * frameless macOS window composited over arbitrary desktop content. Final visual
+ * verification MUST be done in `pnpm run app`, not Storybook. This file exists
+ * for component structure, state-transition logic, and keyboard/click targets.
+ */
+import type { Meta, StoryObj, Decorator } from '@storybook/react'
 import { Overlay } from './Overlay'
 import {
   recordingState,
@@ -9,16 +15,27 @@ import {
   errorState,
 } from '../__fixtures__'
 
+const withOverlayBackdrop: Decorator = (Story) => (
+  <div
+    style={{
+      minHeight: '100vh',
+      background: '#0f1014',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '32px',
+    }}
+  >
+    <div style={{ width: 260, height: 44 }}>
+      <Story />
+    </div>
+  </div>
+)
+
 const meta: Meta<typeof Overlay> = {
   title: 'Components/Overlay',
   component: Overlay,
-  decorators: [
-    (Story) => (
-      <div className="h-[80px] w-[400px] bg-stone-900/85 backdrop-blur-xl rounded-full">
-        <Story />
-      </div>
-    ),
-  ],
+  decorators: [withOverlayBackdrop],
 }
 
 export default meta
@@ -52,6 +69,7 @@ export const Transcribing: Story = {
   args: {
     state: transcribingState,
     send: () => {},
+    elapsedMs: 5000,
   },
 }
 
@@ -67,4 +85,22 @@ export const Error: Story = {
     state: errorState,
     send: () => {},
   },
+}
+
+export const RecordingReducedMotion: Story = {
+  args: {
+    state: recordingState,
+    send: () => {},
+    elapsedMs: 5000,
+  },
+  decorators: [
+    (Story) => (
+      <div style={{ minHeight: '100vh', background: '#0f1014', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px' }}>
+        <style>{`@media (prefers-reduced-motion: reduce) { .beam-pill::before { animation: none !important; } }`}</style>
+        <div style={{ width: 260, height: 44 }}>
+          <Story />
+        </div>
+      </div>
+    ),
+  ],
 }

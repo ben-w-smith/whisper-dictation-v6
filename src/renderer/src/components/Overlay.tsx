@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useMemo, useCallback } from 'react'
 import type { ActorStateFrom } from 'xstate'
 import type { PipelineMachine } from '@renderer/state'
-import { WAVEFORM_GRADIENT, WAVEFORM_BAR_COUNT } from '@shared/constants'
+import { BeamPill } from './BeamPill'
+import './beam.css'
 
 interface OverlayProps {
   state: ActorStateFrom<PipelineMachine>
@@ -12,31 +13,10 @@ interface OverlayProps {
 export function Overlay({ state, elapsedMs: externalElapsedMs, send }: OverlayProps): React.ReactElement | null {
   const { audioLevels } = state.context
   const elapsedMs = externalElapsedMs ?? state.context.elapsedMs
-  const barsRef = useRef<(HTMLDivElement | null)[]>([])
-  const rafRef = useRef<number>(0)
-  const levelsRef = useRef<number[]>(audioLevels)
-
-  // Keep ref in sync
-  levelsRef.current = audioLevels
-
-  // rAF loop for waveform bars
-  useEffect(() => {
-    const tick = () => {
-      const levels = levelsRef.current
-      const bars = barsRef.current
-      for (let i = 0; i < WAVEFORM_BAR_COUNT; i++) {
-        const bar = bars[i]
-        if (!bar) continue
-        const levelIndex = Math.floor((i / WAVEFORM_BAR_COUNT) * levels.length)
-        const level = levels[levelIndex] ?? 0
-        const height = Math.max(3, Math.min(24, level * 240))
-        bar.style.height = `${height}px`
-      }
-      rafRef.current = requestAnimationFrame(tick)
-    }
-    rafRef.current = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(rafRef.current)
-  }, [])
+  const audioLevel = useMemo(
+    () => audioLevels.reduce((a, b) => a + b, 0) / (audioLevels.length || 1),
+    [audioLevels]
+  )
 
   const handleCancel = useCallback(() => {
     send({ type: 'CANCEL' })
@@ -54,6 +34,16 @@ export function Overlay({ state, elapsedMs: externalElapsedMs, send }: OverlayPr
     return null
   }
 
+  const beamState =
+    state.matches('recording')    ? 'recording'    :
+    state.matches('transcribing') ? 'transcribing' :
+    state.matches('complete')     ? 'complete'     :
+    state.matches('error')        ? 'error'        : 'recording'
+
+  const timerSeconds = Math.floor(elapsedMs / 1000)
+  const timerMinutes = Math.floor(timerSeconds / 60)
+  const timerDisplay = `${timerMinutes}:${(timerSeconds % 60).toString().padStart(2, '0')}`
+
   return (
     <div
       className={`h-full flex items-center justify-center ${
@@ -61,69 +51,68 @@ export function Overlay({ state, elapsedMs: externalElapsedMs, send }: OverlayPr
       }`}
       onClick={handleClick}
     >
-      <div className="bg-stone-900/85 backdrop-blur-xl rounded-full px-3 py-2.5 shadow-2xl border border-white/10 w-full">
-        <div className="flex items-center justify-between gap-2">
+      <BeamPill state={beamState} audioLevel={audioLevel}>
+        <div className="flex items-center justify-center h-[32px]">
           {state.matches('recording') && (
-            <>
-              {/* Cancel button */}
+            <div className="flex items-center justify-between gap-2 px-2.5 h-full group">
+              {/* Cancel button (X) — visible on hover */}
               <button
                 onClick={(e) => { e.stopPropagation(); handleCancel() }}
-                className="shrink-0 w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+                className="shrink-0 w-[22px] h-[22px] rounded-full bg-white/[0.08] hover:bg-white/[0.14] flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100"
+                aria-label="Cancel recording"
               >
-                <svg className="w-3.5 h-3.5 text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-3 h-3 text-white/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
 
-              {/* Waveform bars */}
-              <div className="flex-1 flex items-center justify-center gap-[3px] h-7">
-                {[...Array(WAVEFORM_BAR_COUNT)].map((_, i) => (
-                  <div
-                    key={i}
-                    ref={(el) => { barsRef.current[i] = el }}
-                    className="w-[2px] rounded-full transition-none"
-                    style={{
-                      backgroundColor: WAVEFORM_GRADIENT[i],
-                      height: '3px',
-                    }}
-                  />
-                ))}
-              </div>
+              {/* Status dot — solid red, pulses */}
+              <div className="w-[6px] h-[6px] rounded-full bg-[#f87171] animate-[beam-status-pulse_1.4s_linear_infinite]" />
 
-              {/* Stop button */}
+              {/* Elapsed timer */}
+              <span
+                className="font-mono tabular-nums text-[11px] text-white/70 select-none"
+                aria-label={`Recording elapsed: ${timerMinutes} minutes ${(timerSeconds % 60)} seconds`}
+              >
+                {timerDisplay}
+              </span>
+
+              {/* Stop button — red with square */}
               <button
                 onClick={(e) => { e.stopPropagation(); send({ type: 'HOTKEY_PRESSED' }) }}
-                className="shrink-0 w-7 h-7 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center transition-colors"
+                className="shrink-0 w-[22px] h-[22px] rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center transition-colors"
+                aria-label="Stop recording"
               >
-                <div className="w-2.5 h-2.5 rounded-sm bg-white" />
+                <div className="w-2 h-2 rounded-[1px] bg-white" />
               </button>
-            </>
+            </div>
           )}
 
           {state.matches('transcribing') && (
-            <div className="flex-1 flex items-center justify-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+            <div className="flex items-center gap-2 px-2.5 h-full">
+              <div className="w-[6px] h-[6px] rounded-full bg-[#93c5fd]" />
+              <span className="font-mono tabular-nums text-[11px] text-white/70 select-none">{timerDisplay}</span>
             </div>
           )}
 
           {state.matches('complete') && (
-            <div className="flex-1 flex items-center justify-center gap-2">
-              <svg className="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            <div className="flex items-center justify-center px-3 h-full">
+              <svg className="w-3.5 h-3.5 text-[#4ade80]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
             </div>
           )}
 
           {state.matches('error') && (
-            <div className="flex items-center gap-2 w-full px-1">
-              <svg className="w-4 h-4 text-orange-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="flex items-center gap-2 px-2.5 h-full">
+              <svg className="w-4 h-4 text-[#fbbf24] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
               <span className="text-white/90 text-xs">{state.context.error?.message ?? 'Error'}</span>
             </div>
           )}
         </div>
-      </div>
+      </BeamPill>
     </div>
   )
 }
