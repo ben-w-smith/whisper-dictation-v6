@@ -79,6 +79,11 @@
   --color-state-complete:     #4ade80;
   --color-state-error:        #fbbf24;
 
+  /* Overlay stop-button — softer pastel red than the state-recording signal.
+     Hover darkens toward state-recording to reinforce "you'll stop recording". */
+  --color-stop-button:       #fca5a5;
+  --color-stop-button-hover: #f87171;
+
   /* Focus */
   --color-focus-ring: rgba(13, 148, 136, 0.3);
 

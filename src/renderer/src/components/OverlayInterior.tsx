@@ -2,53 +2,59 @@ import React from 'react'
 
 interface OverlayInteriorProps {
   beamState: 'recording' | 'transcribing' | 'complete' | 'error'
-  timerDisplay: string
-  timerMinutes: number
-  timerSeconds: number
+  /** @deprecated no longer rendered; pill no longer displays an elapsed-time counter. */
+  timerDisplay?: string
+  /** @deprecated unused — retained so existing callers compile. */
+  timerMinutes?: number
+  /** @deprecated unused — retained so existing callers compile. */
+  timerSeconds?: number
   onCancel: () => void
   onStop: () => void
   errorMessage?: string
 }
 
+/**
+ * Pill interior. Rendered inside `.beam-pill-content` (an absolutely-
+ * positioned layer that sits above the beam subtree).
+ *
+ * The recording state uses a 3-slot grid (`[22px | flex | 22px]`) so the
+ * pill's width/height stay constant across frames and the aurora beam is
+ * the visually dominant element in the empty center. The cancel (X) button
+ * is always visible — no hover gate — and the stop button uses a softer
+ * pastel-red token rather than the full-saturation recording-state red.
+ *
+ * Non-recording states (transcribing / complete / error) still use simple
+ * centered layouts for now and will adopt the same slot grid in S5/S6.
+ */
 export function OverlayInterior({
   beamState,
-  timerDisplay,
-  timerMinutes,
-  timerSeconds,
   onCancel,
   onStop,
   errorMessage,
 }: OverlayInteriorProps): React.ReactElement {
   return (
-    <div className="flex items-center justify-center h-[32px]">
+    <div className="flex items-center justify-center h-full">
       {beamState === 'recording' && (
-        <div className="flex items-center justify-between gap-2 px-2.5 h-full group">
-          {/* Cancel button (X) — visible on hover */}
+        <div className="grid grid-cols-[22px_1fr_22px] items-center gap-2 px-2.5 h-full w-full">
+          {/* Left slot: always-visible cancel */}
           <button
             onClick={(e) => { e.stopPropagation(); onCancel() }}
-            className="shrink-0 w-[22px] h-[22px] rounded-full bg-white/[0.08] hover:bg-white/[0.14] flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100"
+            className="w-[22px] h-[22px] rounded-full bg-white/[0.08] hover:bg-white/[0.14] flex items-center justify-center transition-colors"
             aria-label="Cancel recording"
           >
-            <svg className="w-3 h-3 text-white/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-3 h-3 text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
 
-          {/* Status dot — solid red, pulses */}
-          <div className="w-[6px] h-[6px] rounded-full bg-[var(--color-state-recording)] animate-[beam-status-pulse_1.4s_linear_infinite]" />
+          {/* Center slot: intentionally empty — the audio-reactive beam below
+              is the recording indicator. */}
+          <div aria-hidden="true" />
 
-          {/* Elapsed timer */}
-          <span
-            className="font-mono tabular-nums text-[11px] text-white/70 select-none"
-            aria-label={`Recording elapsed: ${timerMinutes} minutes ${(timerSeconds % 60)} seconds`}
-          >
-            {timerDisplay}
-          </span>
-
-          {/* Stop button — red with square */}
+          {/* Right slot: stop button in soft pastel red */}
           <button
             onClick={(e) => { e.stopPropagation(); onStop() }}
-            className="shrink-0 w-[22px] h-[22px] rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center transition-colors"
+            className="w-[22px] h-[22px] rounded-full bg-[var(--color-stop-button)] hover:bg-[var(--color-stop-button-hover)] flex items-center justify-center transition-colors"
             aria-label="Stop recording"
           >
             <div className="w-2 h-2 rounded-[1px] bg-white" />
@@ -57,9 +63,8 @@ export function OverlayInterior({
       )}
 
       {beamState === 'transcribing' && (
-        <div className="flex items-center gap-2 px-2.5 h-full">
+        <div className="flex items-center justify-center gap-2 px-2.5 h-full">
           <div className="w-[6px] h-[6px] rounded-full bg-[var(--color-state-transcribing)]" />
-          <span className="font-mono tabular-nums text-[11px] text-white/70 select-none">{timerDisplay}</span>
         </div>
       )}
 
