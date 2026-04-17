@@ -1,4 +1,5 @@
 import React from 'react'
+import { PillSpinner } from './PillSpinner'
 
 interface OverlayInteriorProps {
   beamState: 'recording' | 'transcribing' | 'complete' | 'error'
@@ -63,8 +64,25 @@ export function OverlayInterior({
       )}
 
       {beamState === 'transcribing' && (
-        <div className="flex items-center justify-center gap-2 px-2.5 h-full">
-          <div className="w-[6px] h-[6px] rounded-full bg-[var(--color-state-transcribing)]" />
+        <div className="grid grid-cols-[22px_1fr_22px] items-center gap-2 px-2.5 h-full w-full">
+          {/* Left slot: cancel stays available during transcription so the
+              user can abandon a long-running transcription mid-stream. */}
+          <button
+            onClick={(e) => { e.stopPropagation(); onCancel() }}
+            className="w-[22px] h-[22px] rounded-full bg-white/[0.08] hover:bg-white/[0.14] flex items-center justify-center transition-colors"
+            aria-label="Cancel transcription"
+          >
+            <svg className="w-3 h-3 text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+
+          {/* Center slot: empty — the ocean-tinted beam is the progress cue. */}
+          <div aria-hidden="true" />
+
+          {/* Right slot: sunburst spinner replaces the stop button. Same
+              22×22 footprint so the pill's slot geometry is unchanged. */}
+          <PillSpinner />
         </div>
       )}
 

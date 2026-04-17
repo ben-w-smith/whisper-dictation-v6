@@ -82,26 +82,56 @@
 }
 
 /**
- * Used by OverlayInterior's recording-state status dot via Tailwind's
- * arbitrary-value `animate-[beam-status-pulse_1.4s_linear_infinite]`.
+ * Transcribing-state loading indicator. Replaces the stop button (same
+ * 22×22px footprint in the pill's right slot) so the pill geometry stays
+ * constant across state changes.
+ *
+ * Styling: classic 12-tick radial "sunburst" activity indicator. Each tick
+ * is a child `span` with ascending opacity; the whole ring rotates in
+ * `steps(12)` so the ticks appear to cascade around the circle once per
+ * second. Mono gray on purpose — color would fight the ocean beam below.
  */
-@keyframes beam-status-pulse {
-  0%,
-  100% {
-    opacity: 0.4;
-  }
-  50% {
-    opacity: 1;
+.pill-spinner {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  animation: pill-spinner-rotate 1s steps(12) infinite;
+}
+
+.pill-spinner span {
+  position: absolute;
+  left: calc(50% - 0.75px);
+  top: 2px;
+  width: 1.5px;
+  height: 5px;
+  border-radius: 0.75px;
+  background: rgba(255, 255, 255, 0.9);
+  /*
+   * transform-origin = the container's geometric center relative to this
+   * span's box. Container is 22×22, span is positioned at top:2 with a
+   * 1.5×5 box, so the center sits at (50% of span width, span height - 3
+   * + distance-to-container-center) = (50%, 9px) from the span's origin.
+   */
+  transform-origin: 50% 9px;
+}
+
+@keyframes pill-spinner-rotate {
+  to {
+    transform: rotate(360deg);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .pill-spinner {
+    animation: none;
+  }
   /*
-   * The overlay status dot uses a Tailwind arbitrary-value animation that
-   * references `beam-status-pulse`. Kill it here so the dot stays on-screen
-   * without strobing.
+   * Without the rotation, 12 faded ticks would all be visible at once as
+   * a static ring of dots, which reads as "this is a donut" instead of
+   * "this is loading". Hide the low-opacity ticks so only the top few
+   * brighter ticks remain — still recognizable as an in-progress indicator.
    */
-  [class*='animate-[beam-status-pulse'] {
-    animation: none !important;
+  .pill-spinner span:nth-child(n + 5) {
+    opacity: 0;
   }
 }
