@@ -1,15 +1,39 @@
 /**
- * Overlay pill surface + static state-strip.
+ * Overlay pill surface + audio-reactive beam layering.
  *
- * The audio-reactive aurora beam (recording state) is rendered by the vendored
- * border-beam library at src/renderer/src/vendor/border-beam. That library
- * generates its own CSS into a <style> tag at mount time; nothing in this file
- * needs to interact with it beyond exposing a pill-shaped child with a
- * border-radius for the library to auto-detect.
+ * DOM structure from BeamPill.tsx:
+ *
+ *   .beam-pill-frame                (aspect container; carries data-beam-state)
+ *   ├── .beam-pill-beam-wrap        (aria-hidden beam layer; may be masked)
+ *   │     └── BorderBeam wrapper    ([data-beam=...]; overflow:hidden, radius)
+ *   │           └── .beam-pill-shell (visible pill surface, carries radius)
+ *   └── .beam-pill-content          (absolute-positioned UI layer, z 1)
+ *
+ * The pill surface and the vendored beam live in one subtree; the real UI
+ * (status dot, buttons) lives in a sibling absolute-positioned layer. That
+ * way, any filter we apply to the beam subtree (e.g. grayscale) does NOT
+ * desaturate the X button, stop button, or the backdrop-filtered pixels
+ * visible through the translucent pill.
+ *
+ * The vendored library emits its own CSS into a <style> tag at mount time;
+ * nothing in this file needs to interact with it beyond exposing the pill
+ * shell as a first child with border-radius for auto-detection, and
+ * overriding the filter on the beam pseudo-elements (see bottom).
  */
 
-.beam-pill {
+.beam-pill-frame {
   position: relative;
+  height: 100%;
+  width: 100%;
+}
+
+.beam-pill-beam-wrap {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.beam-pill-shell {
   height: 100%;
   width: 100%;
   background: rgba(17, 17, 19, 0.78);
@@ -20,90 +44,41 @@
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.1),
     0 4px 16px rgba(0, 0, 0, 0.3);
-  overflow: hidden;
+}
+
+.beam-pill-content {
+  position: absolute;
+  inset: 0;
+  pointer-events: auto;
+  z-index: 1;
   isolation: isolate;
 }
 
 /**
- * Static bottom strip. Rendered only in non-recording states (transcribing /
- * complete / error) and in reduced-motion mode. Colored by state-semantic
- * tokens from tokens.css so it automatically follows theme changes.
+ * Saturation axis.
+ *
+ * BeamPill passes `staticColors` to the vendored BorderBeam, which means
+ * the library emits NO hue-shift animation or static filter on its beam
+ * pseudo-elements. That frees the `filter` property for us to drive from
+ * the outside, which we do here.
+ *
+ * `--beam-saturate` is written by BeamPill's rAF loop: 0 at silence,
+ * 1 at speech peak. `filter: grayscale(calc(1 - X))` inverts that into
+ * "gray at silence, full color at speech peak".
+ *
+ * This rule only matches inside `.beam-pill-beam-wrap`, so the pill
+ * shell (also inside the wrap) gets desaturated too — but its background
+ * is already a dark-neutral rgba, so there's no visible difference. The
+ * pill CONTENT (X, stop button, spinner) is a sibling subtree and is
+ * never filtered.
  */
-.beam-pill-static-strip {
-  position: absolute;
-  left: 14%;
-  right: 14%;
-  bottom: 1px;
-  height: 2px;
-  border-radius: 2px;
-  pointer-events: none;
-  z-index: 1;
-  transform-origin: center;
-  transition: opacity 180ms ease-out;
-}
-
-.beam-pill[data-beam-state='transcribing'] .beam-pill-static-strip {
-  background: var(--color-state-transcribing);
-  box-shadow: 0 0 12px 2px var(--color-state-transcribing);
-  animation: beam-pill-transcribe-pulse 1.6s ease-in-out infinite;
-}
-
-.beam-pill[data-beam-state='complete'] .beam-pill-static-strip {
-  background: var(--color-state-complete);
-  box-shadow: 0 0 14px 3px var(--color-state-complete);
-  animation: beam-pill-complete-flash 500ms ease-out forwards;
-}
-
-.beam-pill[data-beam-state='error'] .beam-pill-static-strip {
-  background: var(--color-state-error);
-  box-shadow: 0 0 12px 2px var(--color-state-error);
-  animation: beam-pill-error-pulse 1.3s ease-in-out infinite;
-}
-
-/**
- * Reduced-motion recording fallback: no amplitude-reactive beam, no pulse.
- * Strip renders in a muted neutral so the pill still communicates "active"
- * without motion. Colored via a subtle white line instead of a state token
- * to avoid implying an active red/recording signal at full opacity.
- */
-.beam-pill[data-beam-state='recording'] .beam-pill-static-strip {
-  background: rgba(255, 255, 255, 0.35);
-  box-shadow: 0 0 8px 1px rgba(255, 255, 255, 0.2);
-}
-
-@keyframes beam-pill-transcribe-pulse {
-  0%,
-  100% {
-    opacity: 0.55;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-@keyframes beam-pill-complete-flash {
-  0% {
-    opacity: 0;
-    transform: scaleX(0.6);
-  }
-  35% {
-    opacity: 1;
-    transform: scaleX(1);
-  }
-  100% {
-    opacity: 0.9;
-    transform: scaleX(1);
-  }
-}
-
-@keyframes beam-pill-error-pulse {
-  0%,
-  100% {
-    opacity: 0.6;
-  }
-  50% {
-    opacity: 1;
-  }
+.beam-pill-beam-wrap [data-beam][data-active]::before,
+.beam-pill-beam-wrap [data-beam][data-active]::after,
+.beam-pill-beam-wrap [data-beam][data-fading]::before,
+.beam-pill-beam-wrap [data-beam][data-fading]::after,
+.beam-pill-beam-wrap [data-beam][data-active] [data-beam-bloom],
+.beam-pill-beam-wrap [data-beam][data-fading] [data-beam-bloom] {
+  filter: grayscale(calc(1 - var(--beam-saturate, 0)));
 }
 
 /**
@@ -121,9 +96,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .beam-pill-static-strip {
-    animation: none !important;
-  }
   /*
    * The overlay status dot uses a Tailwind arbitrary-value animation that
    * references `beam-status-pulse`. Kill it here so the dot stays on-screen

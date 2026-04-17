@@ -45,7 +45,6 @@ function useReducedMotion(): boolean {
  * BASELINE_STRENGTH is the minimum strength we ever emit during active
  * recording, so the aurora is always at least softly visible — the
  * "grayscale, kind of there, softly moving" look we want during silence.
- * Saturation (added in S2) takes the beam from gray→color on top of this.
  */
 const SILENCE_FLOOR = 0.003
 const SPEECH_CEIL = 0.12
@@ -55,17 +54,28 @@ const SMOOTHING = 0.22
 /**
  * Audio-reactive pill wrapper.
  *
- * Recording state: vendored BorderBeam (size='line', colorVariant='colorful')
- * renders an aurora beam along the pill's bottom edge. An rAF loop writes a
- * smoothed `--beam-strength` to the wrapper, which the library multiplies into
- * every beam/glow/bloom layer — so loudness = brightness/spread, silence = invisible.
+ * Layering:
+ *   .beam-pill-frame
+ *   ├── .beam-pill-beam-wrap    (aria-hidden; may be filtered grayscale)
+ *   │     └── <BorderBeam>       (vendored; owns ::before/::after/bloom layers)
+ *   │           └── .beam-pill-shell  (transparent-ish pill surface, carries radius)
+ *   └── .beam-pill-content       (absolutely positioned, z-index 1; the real UI)
  *
- * Non-recording states: beam fades out (`active={false}`) and a static
- * state-semantic strip renders at the bottom of the pill (blue pulse while
- * transcribing, green flash on complete, amber pulse on error).
+ * The beam and the pill content live in separate DOM subtrees so a
+ * `filter: grayscale(...)` on the beam side does NOT desaturate the X button,
+ * stop button, or the backdrop-filtered desktop behind the pill.
  *
- * prefers-reduced-motion: falls back to the static-strip for every state,
- * including recording. No rAF loop; no audio reactivity.
+ * `staticColors={true}` tells the vendored library to emit no hue-shift
+ * animation — which would otherwise override any `filter` we set here.
+ *
+ * Recording state: rAF writes smoothed `--beam-strength` (amplitude) and
+ * `--beam-saturate` (speech-vs-silence) onto the BorderBeam wrapper. The
+ * library multiplies strength into stroke/inner/bloom opacity; our own CSS
+ * rule in beam.css turns saturate into `filter: grayscale()` on the beam
+ * pseudo-elements only.
+ *
+ * prefers-reduced-motion: beam is inactive, no rAF loop, no audio reactivity.
+ * The content layer still renders its state-specific UI.
  */
 export function BeamPill({ state, getAudioLevel, children }: BeamPillProps): React.ReactElement {
   const wrapperRef = useRef<HTMLDivElement | null>(null)
@@ -80,6 +90,7 @@ export function BeamPill({ state, getAudioLevel, children }: BeamPillProps): Rea
     const el = wrapperRef.current
     if (!beamActive) {
       el?.style.removeProperty('--beam-strength')
+      el?.style.removeProperty('--beam-saturate')
       levelRef.current = 0
       return
     }
@@ -90,28 +101,32 @@ export function BeamPill({ state, getAudioLevel, children }: BeamPillProps): Rea
       const curved = Math.sqrt(norm) // gamma ~0.5 lifts quiet speech
       const strength = BASELINE_STRENGTH + (1 - BASELINE_STRENGTH) * curved
       el?.style.setProperty('--beam-strength', strength.toFixed(3))
+      el?.style.setProperty('--beam-saturate', curved.toFixed(3))
       rafRef.current = requestAnimationFrame(tick)
     }
     rafRef.current = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(rafRef.current)
   }, [beamActive, getAudioLevel])
 
-  const showStaticStrip = !isRecording || reducedMotion
-
   return (
-    <BorderBeam
-      ref={wrapperRef}
-      size="line"
-      colorVariant="colorful"
-      theme="dark"
-      active={beamActive}
-      strength={0}
-      style={{ width: '100%', height: '100%' }}
-    >
-      <div className="beam-pill" data-beam-state={state} role="status" aria-live="polite">
-        {children}
-        {showStaticStrip && <span className="beam-pill-static-strip" aria-hidden="true" />}
+    <div className="beam-pill-frame" data-beam-state={state}>
+      <div className="beam-pill-beam-wrap" aria-hidden="true">
+        <BorderBeam
+          ref={wrapperRef}
+          size="line"
+          colorVariant="colorful"
+          theme="dark"
+          staticColors
+          active={beamActive}
+          strength={0}
+          style={{ width: '100%', height: '100%' }}
+        >
+          <div className="beam-pill-shell" />
+        </BorderBeam>
       </div>
-    </BorderBeam>
+      <div className="beam-pill-content" role="status" aria-live="polite">
+        {children}
+      </div>
+    </div>
   )
 }
