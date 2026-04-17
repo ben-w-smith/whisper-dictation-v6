@@ -126,8 +126,8 @@ export function registerIpcHandlers(): void {
         let overlayWin = getWindow('overlay')
         if (!overlayWin) {
           overlayWin = new BrowserWindow({
-            width: 240,
-            height: 32,
+            width: 260,
+            height: 44,
             show: false,
             frame: false,
             transparent: true,
@@ -135,8 +135,8 @@ export function registerIpcHandlers(): void {
             alwaysOnTop: true,
             skipTaskbar: true,
             focusable: false,
-            x: Math.round((screenWidth - 240) / 2),
-            y: 24,
+            x: Math.round((screenWidth - 260) / 2),
+            y: 20,
             title: 'Whisper Overlay',
             webPreferences: {
               preload: join(__dirname, '../preload/index.js'),

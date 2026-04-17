@@ -1,9 +1,10 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react'
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { useActorRef, useSelector } from '@xstate/react'
 import { createPipelineMachine } from './state/pipelineMachine'
 import { Overlay } from './components/Overlay'
 import { Onboarding } from './components/Onboarding'
 import { Home } from './views/Home'
+import { BeamPill } from './components/BeamPill'
 import { getAudioCapture, type AudioCaptureResult } from './audio/capture'
 import { IPC } from '@shared/ipc'
 import { getDebugBus } from '@shared/debug'
@@ -77,6 +78,7 @@ function OverlayWindow(): React.ReactElement {
   const [overlayState, setOverlayState] = useState<string>('idle')
   // Ref-based audio levels — updated directly, bypassing React state for zero-lag bars
   const audioLevelsRef = useRef<number[]>([])
+  const [audioLevelScalar, setAudioLevelScalar] = useState(0)
   const barsRef = useRef<(HTMLDivElement | null)[]>([])
   const rafRef = useRef<number>(0)
   const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -108,6 +110,11 @@ function OverlayWindow(): React.ReactElement {
       setOverlayState(d.state)
       // Write directly to ref for rAF — no React state update for audio levels
       audioLevelsRef.current = d.audioLevels
+      // Compute mean for BeamPill audio-reactive beam
+      if (d.state === 'recording' && d.audioLevels.length > 0) {
+        const mean = d.audioLevels.reduce((a, b) => a + b, 0) / d.audioLevels.length
+        setAudioLevelScalar(mean)
+      }
 
       // Auto-dismiss complete state after a brief display
       if (d.state === 'complete') {
@@ -150,6 +157,8 @@ function OverlayWindow(): React.ReactElement {
 
   if (overlayState === 'idle') return <></>
 
+  const beamState = overlayState as 'recording' | 'transcribing' | 'complete' | 'error'
+
   return (
     <div
       className={`h-full flex items-center justify-center ${
@@ -157,64 +166,66 @@ function OverlayWindow(): React.ReactElement {
       }`}
       onClick={handleClick}
     >
-      <div className="bg-stone-900/85 backdrop-blur-xl rounded-full shadow-2xl border border-gray-400/50 h-[32px] flex items-center justify-center">
-        {overlayState === 'recording' && (
-          <div className="flex items-center justify-between gap-2 px-1.5 h-full">
-            {/* Cancel button (X) — gray matching border */}
-            <button
-              onClick={(e) => { e.stopPropagation(); handleCancel() }}
-              className="shrink-0 w-6 h-6 rounded-full bg-transparent hover:bg-white/10 flex items-center justify-center transition-colors"
-            >
-              <svg className="w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+      <BeamPill state={beamState} audioLevel={audioLevelScalar}>
+        <div className="flex items-center justify-center h-[32px]">
+          {overlayState === 'recording' && (
+            <div className="flex items-center justify-between gap-2 px-1.5 h-full">
+              {/* Cancel button (X) — gray matching border */}
+              <button
+                onClick={(e) => { e.stopPropagation(); handleCancel() }}
+                className="shrink-0 w-6 h-6 rounded-full bg-transparent hover:bg-white/10 flex items-center justify-center transition-colors"
+              >
+                <svg className="w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
 
-            {/* Waveform bars */}
-            <div className="flex items-center justify-center gap-[2px] flex-1 h-full">
-              {[...Array(WAVEFORM_BAR_COUNT)].map((_, i) => (
-                <div
-                  key={i}
-                  ref={(el) => { barsRef.current[i] = el }}
-                  className="w-[2px] rounded-full transition-none"
-                  style={{
-                    backgroundColor: WAVEFORM_GRADIENT[i],
-                    height: '2px',
-                  }}
-                />
-              ))}
+              {/* Waveform bars (kept during Step B migration) */}
+              <div className="flex items-center justify-center gap-[2px] flex-1 h-full">
+                {[...Array(WAVEFORM_BAR_COUNT)].map((_, i) => (
+                  <div
+                    key={i}
+                    ref={(el) => { barsRef.current[i] = el }}
+                    className="w-[2px] rounded-full transition-none"
+                    style={{
+                      backgroundColor: WAVEFORM_GRADIENT[i],
+                      height: '2px',
+                    }}
+                  />
+                ))}
+              </div>
+
+              {/* Stop button — red with square */}
+              <button
+                onClick={(e) => { e.stopPropagation(); handleStop() }}
+                className="shrink-0 w-6 h-6 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center transition-colors"
+              >
+                <div className="w-2 h-2 rounded-[1px] bg-white" />
+              </button>
             </div>
+          )}
 
-            {/* Stop button — red with square */}
-            <button
-              onClick={(e) => { e.stopPropagation(); handleStop() }}
-              className="shrink-0 w-6 h-6 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center transition-colors"
-            >
-              <div className="w-2 h-2 rounded-[1px] bg-white" />
-            </button>
-          </div>
-        )}
+          {overlayState === 'transcribing' && (
+            <div className="flex items-center justify-center px-4 h-full">
+              <div className="w-[6px] h-[6px] rounded-full bg-blue-400 animate-pulse" />
+            </div>
+          )}
 
-        {overlayState === 'transcribing' && (
-          <div className="flex items-center justify-center px-4 h-full">
-            <div className="w-[6px] h-[6px] rounded-full bg-blue-400 animate-pulse" />
-          </div>
-        )}
+          {overlayState === 'complete' && (
+            <div className="flex items-center justify-center px-4 h-full">
+              <svg className="w-3.5 h-3.5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+          )}
 
-        {overlayState === 'complete' && (
-          <div className="flex items-center justify-center px-4 h-full">
-            <svg className="w-3.5 h-3.5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-        )}
-
-        {overlayState === 'error' && (
-          <div className="flex items-center justify-center px-4 h-full">
-            <div className="w-[6px] h-[6px] rounded-full bg-orange-400" />
-          </div>
-        )}
-      </div>
+          {overlayState === 'error' && (
+            <div className="flex items-center justify-center px-4 h-full">
+              <div className="w-[6px] h-[6px] rounded-full bg-orange-400" />
+            </div>
+          )}
+        </div>
+      </BeamPill>
     </div>
   )
 }
