@@ -137,3 +137,52 @@ export async function queryDebugBus(
     return bus.query(f)
   }, filter)
 }
+
+/**
+ * Find an existing window whose URL contains the given fragment.
+ * Returns null if no match found.
+ */
+export async function getWindowByUrl(
+  app: ElectronApplication,
+  fragment: string
+): Promise<Page | null> {
+  const windows = app.windows()
+  for (const win of windows) {
+    try {
+      const url = win.url()
+      if (url.includes(fragment)) return win
+    } catch {
+      // Window may not be ready
+    }
+  }
+  return null
+}
+
+/**
+ * Wait for a window whose URL contains the given fragment to appear.
+ * Polls app.windows() until found or timeout.
+ */
+export async function waitForWindowByUrl(
+  app: ElectronApplication,
+  fragment: string,
+  timeout = 5000
+): Promise<Page> {
+  const start = Date.now()
+  while (Date.now() - start < timeout) {
+    const win = await getWindowByUrl(app, fragment)
+    if (win) return win
+    await new Promise((r) => setTimeout(r, 200))
+  }
+  throw new Error(`Timed out waiting for window with URL containing "${fragment}" after ${timeout}ms`)
+}
+
+/**
+ * Open the Home/Settings window via IPC and return its Page.
+ */
+export async function openHomeWindow(app: ElectronApplication): Promise<Page> {
+  const bgWin = await getBackgroundWindow(app)
+  await bgWin.evaluate(() => {
+    return window.api.invoke('window:settings')
+  })
+  return await waitForWindowByUrl(app, 'home')
+}

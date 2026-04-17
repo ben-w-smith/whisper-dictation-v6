@@ -10,6 +10,18 @@ let mouseCallback: (() => void) | null = null
 let mouseListener: ((event: EventData) => void) | null = null
 let isMousePaused = false
 
+/** Test-only: stored capture callback so E2E can trigger it without physical mouse events. */
+let capturedMouseCallbackForTest: ((macOSButton: number) => void) | null = null
+
+/** @internal Test-only — invoke the pending mouse capture callback. */
+export function triggerCaptureForTest(button: number): void {
+  if (capturedMouseCallbackForTest) {
+    const cb = capturedMouseCallbackForTest
+    capturedMouseCallbackForTest = null
+    cb(button)
+  }
+}
+
 /**
  * Register multiple keyboard shortcuts for recording control.
  * Existing keyboard shortcuts are replaced; mouse registration is preserved.
@@ -178,6 +190,7 @@ export function isRegistered(): boolean {
  * Calls `onCapture` once with the macOS buttonNumber, then stops.
  */
 export function captureMouseButton(onCapture: (macOSButton: number) => void): void {
+  capturedMouseCallbackForTest = onCapture
   const listener = (event: EventData) => {
     // Only capture extra buttons (middle=2, back=3, forward=4, side=5+)
     if (event.buttonNumber !== undefined && event.buttonNumber >= 2) {
@@ -187,6 +200,7 @@ export function captureMouseButton(onCapture: (macOSButton: number) => void): vo
         iohook.stopMonitoring()
       } catch { /* ignore */ }
       console.log(`[Hotkeys] Captured mouse button: macOS ${event.buttonNumber}`)
+      capturedMouseCallbackForTest = null
       onCapture(event.buttonNumber)
     }
   }

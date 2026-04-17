@@ -64,6 +64,7 @@ export const IPC = {
   TEST_MOCK_TRANSCRIPTION: 'test:mock-transcription',
   TEST_READ_CLIPBOARD: 'test:read-clipboard',
   TEST_COMPLETE_ONBOARDING: 'test:complete-onboarding',
+  TEST_TRIGGER_MOUSE_CAPTURE: 'test:trigger-mouse-capture',
 } as const
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC]

@@ -237,13 +237,13 @@ If the migration accidentally misses a site, behavior degrades silently (message
 
 ## Acceptance Criteria
 
-- [ ] `src/main/windows.ts` exists and is unit-tested
-- [ ] Zero calls to `BrowserWindow.getAllWindows().find(w => w.getTitle() === ...)` in `src/main/`
-- [ ] Zero `page-title-updated` handlers in `src/main/`
-- [ ] All `BrowserWindow.getAllWindows().forEach((win) => win.webContents.send(...))` patterns replaced with `broadcast()` or `sendTo()`
-- [ ] E2E test covers routing across window lifecycle
-- [ ] `docs/shortcut-architecture.md` updated to reference registry (remove "title-based routing" section)
-- [ ] No regressions in existing Playwright tests
+- [x] `src/main/windows.ts` exists and is unit-tested
+- [x] Zero calls to `BrowserWindow.getAllWindows().find(w => w.getTitle() === ...)` in `src/main/`
+- [x] Zero `page-title-updated` handlers in `src/main/`
+- [x] All `BrowserWindow.getAllWindows().forEach((win) => win.webContents.send(...))` patterns replaced with `broadcast()` or `sendTo()`
+- [x] E2E test covers routing across window lifecycle
+- [x] `docs/shortcut-architecture.md` updated to reference registry (remove "title-based routing" section)
+- [x] No regressions in existing Playwright tests
 
 ---
 

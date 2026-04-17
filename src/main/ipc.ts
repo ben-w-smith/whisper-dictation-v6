@@ -15,7 +15,7 @@ import { checkAllPermissions, requestMicrophonePermission } from './permissions'
 import { openHomeWindow, openAboutWindow } from './tray'
 import { setLastTranscription, updateTrayState } from './tray'
 import { registerWindow, getWindow, sendTo, broadcast } from './windows'
-import { updateShortcuts, registerMouseButton, unregisterMouseButton, pauseHotkey, resumeHotkey, captureMouseButton } from './hotkeys'
+import { updateShortcuts, registerMouseButton, unregisterMouseButton, pauseHotkey, resumeHotkey, captureMouseButton, triggerCaptureForTest } from './hotkeys'
 import {
   searchHfModels,
   getHfModelFiles,
@@ -607,6 +607,11 @@ export function registerIpcHandlers(): void {
       await setSetting('onboardingComplete' as keyof AppSettings, true as unknown as AppSettings[keyof AppSettings])
       // Notify all windows
       broadcast(IPC.SETTINGS_UPDATED, { key: 'onboardingComplete', value: true })
+    })
+
+    // Trigger the pending mouse capture callback — simulates iohook firing
+    ipcMain.handle(IPC.TEST_TRIGGER_MOUSE_CAPTURE, async (_event, buttonNumber: number): Promise<void> => {
+      triggerCaptureForTest(buttonNumber)
     })
   }
 }
