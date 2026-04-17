@@ -27,7 +27,7 @@ function useHash(): string {
  * unnecessary IPC traffic — the overlay is theme-independent per plan §3.5.
  */
 function useAppearanceBridge(enabled: boolean) {
-  const [appearanceSettings, setAppearanceSettings] = useState(DEFAULT_SETTINGS)
+  const [appearanceSettings, setAppearanceSettings] = useState<AppSettings | null>(null)
   useEffect(() => {
     if (!enabled) return
     window.api.invoke(IPC.GET_SETTINGS).then((s) => {
@@ -40,7 +40,7 @@ function useAppearanceBridge(enabled: boolean) {
     })
     return unsub
   }, [enabled])
-  useAppearance(enabled ? appearanceSettings : DEFAULT_SETTINGS)
+  useAppearance(enabled ? appearanceSettings : null)
 }
 
 function App(): React.ReactElement {

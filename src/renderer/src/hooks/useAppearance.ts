@@ -9,16 +9,18 @@ interface AppearanceSettings {
   followSystemTheme: boolean
 }
 
-export function useAppearance(settings: AppearanceSettings) {
+export function useAppearance(settings: AppearanceSettings | null) {
   const [systemThemeVersion, setSystemThemeVersion] = useState(0)
 
-  const effectiveTheme = useMemo<ThemeName>(() => {
+  const effectiveTheme = useMemo<ThemeName | null>(() => {
+    if (!settings) return null
     if (!settings.followSystemTheme) return settings.theme
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
     return prefersDark ? 'dark' : 'light'
-  }, [settings.theme, settings.followSystemTheme, systemThemeVersion])
+  }, [settings?.theme, settings?.followSystemTheme, systemThemeVersion])
 
   useEffect(() => {
+    if (!settings || !effectiveTheme) return
     const html = document.documentElement
     html.dataset.theme = effectiveTheme
     html.dataset.accent = settings.accent
@@ -34,14 +36,14 @@ export function useAppearance(settings: AppearanceSettings) {
         radiusScale: settings.radiusScale,
       }))
     } catch {}
-  }, [effectiveTheme, settings.accent, settings.ambient, settings.radiusScale, settings.theme])
+  }, [effectiveTheme, settings?.accent, settings?.ambient, settings?.radiusScale, settings?.theme])
 
   // Listen for system theme changes when followSystemTheme is on
   useEffect(() => {
-    if (!settings.followSystemTheme) return
+    if (!settings?.followSystemTheme) return
     const mq = window.matchMedia('(prefers-color-scheme: dark)')
     const handler = () => setSystemThemeVersion(v => v + 1)
     mq.addEventListener('change', handler)
     return () => mq.removeEventListener('change', handler)
-  }, [settings.followSystemTheme])
+  }, [settings?.followSystemTheme])
 }
