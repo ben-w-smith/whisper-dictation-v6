@@ -87,20 +87,11 @@ export const Error: Story = {
   },
 }
 
-export const RecordingReducedMotion: Story = {
-  args: {
-    state: recordingState,
-    send: () => {},
-    elapsedMs: 5000,
-  },
-  decorators: [
-    (Story) => (
-      <div style={{ minHeight: '100vh', background: '#0f1014', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px' }}>
-        <style>{`@media (prefers-reduced-motion: reduce) { .beam-pill::before { animation: none !important; } }`}</style>
-        <div style={{ width: 260, height: 44 }}>
-          <Story />
-        </div>
-      </div>
-    ),
-  ],
-}
+/**
+ * Reduced-motion story was removed when the rotating-conic beam was replaced
+ * by the vendored BorderBeam (see src/renderer/src/vendor/border-beam). The
+ * new component reads `matchMedia('(prefers-reduced-motion: reduce)')` at
+ * runtime and renders a static strip instead — which cannot be reliably
+ * simulated from inside a story. Toggle System Settings → Accessibility →
+ * Display → Reduce motion and reload Storybook to verify.
+ */

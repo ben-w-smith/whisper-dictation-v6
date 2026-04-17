@@ -1,104 +1,135 @@
-@property --beam-angle {
-  syntax: '<angle>';
-  initial-value: 0deg;
-  inherits: false;
-}
+/**
+ * Overlay pill surface + static state-strip.
+ *
+ * The audio-reactive aurora beam (recording state) is rendered by the vendored
+ * border-beam library at src/renderer/src/vendor/border-beam. That library
+ * generates its own CSS into a <style> tag at mount time; nothing in this file
+ * needs to interact with it beyond exposing a pill-shaped child with a
+ * border-radius for the library to auto-detect.
+ */
 
 .beam-pill {
   position: relative;
+  height: 100%;
+  width: 100%;
+  background: rgba(17, 17, 19, 0.78);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  backdrop-filter: blur(20px) saturate(140%);
+  border-radius: 9999px;
+  border: 1px inset rgba(255, 255, 255, 0.06);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.1),
+    0 4px 16px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
   isolation: isolate;
-  --beam-opacity: 0.55;
-  --beam-glow: 6px;
-  --beam-color: var(--color-state-recording);
-  --beam-halo: #fca5a5;
-  --beam-period: 2.8s;
 }
 
-.beam-pill::before {
-  content: '';
+/**
+ * Static bottom strip. Rendered only in non-recording states (transcribing /
+ * complete / error) and in reduced-motion mode. Colored by state-semantic
+ * tokens from tokens.css so it automatically follows theme changes.
+ */
+.beam-pill-static-strip {
   position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1.5px;
-  background: conic-gradient(
-    from var(--beam-angle),
-    transparent 0deg,
-    transparent 320deg,
-    var(--beam-halo) 340deg,
-    var(--beam-color) 355deg,
-    #ffffff 360deg,
-    var(--beam-color) 365deg,
-    var(--beam-halo) 380deg,
-    transparent 400deg
-  );
-  -webkit-mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-          mask-composite: exclude;
-  opacity: var(--beam-opacity);
-  filter: drop-shadow(0 0 var(--beam-glow) var(--beam-color));
-  animation: beam-rotate var(--beam-period) linear infinite;
+  left: 14%;
+  right: 14%;
+  bottom: 1px;
+  height: 2px;
+  border-radius: 2px;
   pointer-events: none;
-  transition: opacity 120ms linear, filter 180ms linear;
+  z-index: 1;
+  transform-origin: center;
+  transition: opacity 180ms ease-out;
 }
 
-@keyframes beam-rotate {
-  to { --beam-angle: 360deg; }
+.beam-pill[data-beam-state='transcribing'] .beam-pill-static-strip {
+  background: var(--color-state-transcribing);
+  box-shadow: 0 0 12px 2px var(--color-state-transcribing);
+  animation: beam-pill-transcribe-pulse 1.6s ease-in-out infinite;
 }
 
-/* State variants — set on the root .beam-pill */
-.beam-pill[data-beam-state="transcribing"] {
-  --beam-color: var(--color-state-transcribing);
-  --beam-halo: #60a5fa;
-  --beam-period: 1.6s;
-  --beam-opacity: 0.85;
-  --beam-glow: 6px;
+.beam-pill[data-beam-state='complete'] .beam-pill-static-strip {
+  background: var(--color-state-complete);
+  box-shadow: 0 0 14px 3px var(--color-state-complete);
+  animation: beam-pill-complete-flash 500ms ease-out forwards;
 }
 
-.beam-pill[data-beam-state="complete"] {
-  --beam-color: var(--color-state-complete);
-  --beam-halo: #86efac;
-  --beam-period: 0.9s;
-  /* opacity managed via one-shot animation */
+.beam-pill[data-beam-state='error'] .beam-pill-static-strip {
+  background: var(--color-state-error);
+  box-shadow: 0 0 12px 2px var(--color-state-error);
+  animation: beam-pill-error-pulse 1.3s ease-in-out infinite;
 }
 
-.beam-pill[data-beam-state="complete"]::before {
-  animation: beam-complete-flash 900ms ease-out forwards;
+/**
+ * Reduced-motion recording fallback: no amplitude-reactive beam, no pulse.
+ * Strip renders in a muted neutral so the pill still communicates "active"
+ * without motion. Colored via a subtle white line instead of a state token
+ * to avoid implying an active red/recording signal at full opacity.
+ */
+.beam-pill[data-beam-state='recording'] .beam-pill-static-strip {
+  background: rgba(255, 255, 255, 0.35);
+  box-shadow: 0 0 8px 1px rgba(255, 255, 255, 0.2);
 }
 
-.beam-pill[data-beam-state="error"] {
-  --beam-color: var(--color-state-error);
-  --beam-halo: #f59e0b;
-  --beam-period: 3.5s;
-  --beam-opacity: 0.7;
-  --beam-glow: 6px;
+@keyframes beam-pill-transcribe-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
-.beam-pill[data-beam-state="error"]::before {
-  animation: beam-rotate 3.5s linear infinite, beam-error-shake 320ms ease-out;
+@keyframes beam-pill-complete-flash {
+  0% {
+    opacity: 0;
+    transform: scaleX(0.6);
+  }
+  35% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+  100% {
+    opacity: 0.9;
+    transform: scaleX(1);
+  }
 }
 
-@keyframes beam-complete-flash {
-  0%   { --beam-opacity: 0; --beam-glow: 0px; }
-  35%  { --beam-opacity: 1; --beam-glow: 18px; }
-  100% { --beam-opacity: 0; --beam-glow: 0px; }
+@keyframes beam-pill-error-pulse {
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
-@keyframes beam-error-shake {
-  0%, 100% { transform: translateX(0); }
-  25%      { transform: translateX(-2px); }
-  75%      { transform: translateX(2px); }
-}
-
+/**
+ * Used by OverlayInterior's recording-state status dot via Tailwind's
+ * arbitrary-value `animate-[beam-status-pulse_1.4s_linear_infinite]`.
+ */
 @keyframes beam-status-pulse {
-  0%, 100% { opacity: 0.4; }
-  50%      { opacity: 1; }
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
-/* Reduced motion — halt rotation, audio-reactive opacity still works */
 @media (prefers-reduced-motion: reduce) {
-  .beam-pill::before {
+  .beam-pill-static-strip {
+    animation: none !important;
+  }
+  /*
+   * The overlay status dot uses a Tailwind arbitrary-value animation that
+   * references `beam-status-pulse`. Kill it here so the dot stays on-screen
+   * without strobing.
+   */
+  [class*='animate-[beam-status-pulse'] {
     animation: none !important;
   }
 }
