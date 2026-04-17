@@ -17,5 +17,9 @@
       "@renderer/*": ["./src/renderer/src/*"]
     }
   },
-  "include": ["src/renderer/**/*", "src/shared/**/*"]
+  "include": ["src/renderer/**/*", "src/shared/**/*"],
+  "exclude": [
+    "src/renderer/**/*.stories.tsx",
+    "src/renderer/src/__fixtures__/**"
+  ]
 }

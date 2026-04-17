@@ -1,6 +1,6 @@
 import React from 'react'
 import type { AppSettings, ThemeName, AccentName, AmbientName } from '@shared/types'
-import { ToggleSwitch } from '../components/ToggleSwitch'
+import { ToggleSwitch } from '../../components/ToggleSwitch'
 
 const THEMES: { id: ThemeName; label: string; canvas: string; surface: string; border: string }[] = [
   { id: 'light', label: 'Light', canvas: '#fafafa', surface: '#ffffff', border: '#e4e4e7' },

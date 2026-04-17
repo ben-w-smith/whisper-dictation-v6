@@ -37,7 +37,7 @@ function resolveModelPath(path: string): string {
   }
   return path
 }
-import type { AppSettings, TranscriptionEntry } from '@shared/types'
+import type { AppError, AppSettings, TranscriptionEntry } from '@shared/types'
 import type { LocalModel } from '@shared/types'
 
 type WindowMode = 'onboarding' | 'overlay' | 'hidden'
@@ -123,9 +123,9 @@ export function registerIpcHandlers(): void {
 
       case 'overlay': {
         // Show or create the overlay window
-        let overlayWin = getWindow('overlay')
-        if (!overlayWin) {
-          overlayWin = new BrowserWindow({
+        const existing = getWindow('overlay')
+        if (!existing) {
+          const win = new BrowserWindow({
             width: 240,
             height: 32,
             show: false,
@@ -144,20 +144,20 @@ export function registerIpcHandlers(): void {
               nodeIntegration: false,
             },
           })
-          registerWindow('overlay', overlayWin)
+          registerWindow('overlay', win)
 
           const rendererUrl = process.env['ELECTRON_RENDERER_URL']
           if (rendererUrl) {
-            overlayWin.loadURL(`${rendererUrl}/#overlay`)
+            win.loadURL(`${rendererUrl}/#overlay`)
           } else {
-            overlayWin.loadFile(join(__dirname, '../renderer/index.html'), { hash: 'overlay' })
+            win.loadFile(join(__dirname, '../renderer/index.html'), { hash: 'overlay' })
           }
           // showInactive() prevents stealing focus from the user's active app
-          overlayWin.once('ready-to-show', () => {
-            overlayWin.showInactive()
+          win.once('ready-to-show', () => {
+            win.showInactive()
           })
         } else {
-          overlayWin.showInactive()
+          existing.showInactive()
         }
         break
       }
@@ -316,11 +316,22 @@ export function registerIpcHandlers(): void {
 
       return finalText
     } catch (error) {
-      const appError = error instanceof Error && 'code' in error
-        ? error as { code: string; message: string; suggestion: string }
-        : createError('TRANSCRIPTION_FAILED', {
-            message: error instanceof Error ? error.message : 'Unknown error',
-          })
+      // Normalize whatever was thrown into a full AppError. `error` may be
+      // a plain Error, an Error with a `code` added on (thrown from
+      // whisper/llama helpers), or an arbitrary value.
+      let appError: AppError
+      if (error && typeof error === 'object' && 'code' in error) {
+        const e = error as { code: string; message?: string; suggestion?: string }
+        appError = {
+          code: e.code as AppError['code'],
+          message: e.message ?? (error instanceof Error ? error.message : 'Unknown error'),
+          suggestion: e.suggestion ?? '',
+        }
+      } else {
+        appError = createError('TRANSCRIPTION_FAILED', {
+          message: error instanceof Error ? error.message : 'Unknown error',
+        })
+      }
 
       // Send error to renderer
       broadcast(IPC.WHISPER_ERROR, appError)

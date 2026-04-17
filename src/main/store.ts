@@ -1,9 +1,18 @@
-import ElectronStore from 'electron-store'
-const Store = (ElectronStore as unknown as { default: typeof ElectronStore }).default || ElectronStore
+import ElectronStoreImport from 'electron-store'
 import Keytar from 'keytar'
-const keytar = (Keytar as unknown as { default: typeof Keytar }).default || Keytar
 import { DEFAULT_SETTINGS } from '@shared/constants'
 import type { AppSettings, TranscriptionEntry } from '@shared/types'
+
+// electron-store 10.x is ESM with a default export. Under Electron's CJS
+// loader the default export can land on `.default`; handle both shapes.
+const Store = (ElectronStoreImport as unknown as { default: typeof ElectronStoreImport }).default || ElectronStoreImport
+// Type alias so `Store<T>` resolves in type positions (the `const Store`
+// above only binds in value-space). Constraint mirrors electron-store's
+// own `T extends Record<string, any>` so we can pass AppSettings directly.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Store<T extends Record<string, any>> = ElectronStoreImport<T>
+
+const keytar = (Keytar as unknown as { default: typeof Keytar }).default || Keytar
 
 /**
  * Create the settings store
@@ -95,24 +104,12 @@ function getHistoryStore(): Store<{ entries: TranscriptionEntry[] }> {
 export async function getSettings(): Promise<AppSettings> {
   const store = getSettingsStore()
 
-  // Get base settings from store
-  const baseSettings = {
+  // API keys are stored exclusively in the OS keychain via keytar —
+  // they are not part of AppSettings and are accessed via getApiKey()
+  // by callers that need them (refinement, remote transcription).
+  return {
     ...DEFAULT_SETTINGS,
     ...store.store,
-  }
-
-  // Fetch API keys from keytar (non-blocking, use stored values as fallback)
-  try {
-    const { openai, google, anthropic } = await getApiKeys()
-    return {
-      ...baseSettings,
-      openaiApiKey: openai || baseSettings.openaiApiKey,
-      googleApiKey: google || baseSettings.googleApiKey,
-      anthropicApiKey: anthropic || baseSettings.anthropicApiKey,
-    }
-  } catch {
-    // If keytar fails, return base settings with stored API keys
-    return baseSettings
   }
 }
 
@@ -132,28 +129,8 @@ export async function getSetting<K extends keyof AppSettings>(key: K): Promise<A
  * @param value - The new value
  */
 export async function setSetting<K extends keyof AppSettings>(key: K, value: AppSettings[K]): Promise<void> {
-  // Handle API keys with keytar
-  if (key === 'openaiApiKey') {
-    await setApiKey('openai', value as string)
-    // Also store in electron-store as fallback
-    const store = getSettingsStore()
-    store.set(key, value)
-    return
-  }
-  if (key === 'googleApiKey') {
-    await setApiKey('google', value as string)
-    const store = getSettingsStore()
-    store.set(key, value)
-    return
-  }
-  if (key === 'anthropicApiKey') {
-    await setApiKey('anthropic', value as string)
-    const store = getSettingsStore()
-    store.set(key, value)
-    return
-  }
-
-  // Regular settings go to electron-store
+  // API keys never pass through setSetting — they live in keytar and
+  // are mutated via setApiKey() directly.
   const store = getSettingsStore()
   store.set(key, value)
 }
@@ -307,12 +284,10 @@ export async function getApiKey(service: keyof typeof KEYTAR_SERVICES): Promise<
       return key
     }
   } catch (error) {
-    console.warn(`keytar failed to get ${service} key, falling back to store:`, error)
+    // No electron-store fallback — see setApiKey for rationale.
+    console.error(`keytar failed to get ${service} key:`, error)
   }
-
-  // Fallback to electron-store
-  const store = getSettingsStore()
-  return store.get(`${service}ApiKey`, '') as string
+  return ''
 }
 
 /**
@@ -327,10 +302,11 @@ export async function setApiKey(service: keyof typeof KEYTAR_SERVICES, key: stri
       await keytar.deletePassword(serviceName, KEYTAR_ACCOUNT)
     }
   } catch (error) {
-    console.warn(`keytar failed to set ${service} key, falling back to store:`, error)
-    // Fallback to electron-store
-    const store = getSettingsStore()
-    store.set(`${service}ApiKey` as keyof AppSettings, key)
+    // If keytar fails there is no fallback — API keys are intentionally
+    // not persisted to electron-store (they are not part of AppSettings).
+    // Surface the failure so the caller can notify the user.
+    console.error(`keytar failed to set ${service} key:`, error)
+    throw error
   }
 }
 

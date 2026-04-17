@@ -6,13 +6,26 @@ interface ShortcutRecorderProps {
   mouseButton: number | null
   onChange: (keyboard: string | null, mouse: number | null) => void
   disabled?: boolean
+  /**
+   * When false, mouse-button capture is suppressed — the recorder ignores
+   * MOUSE_BUTTON_CAPTURED events and skips starting iohook mouse capture.
+   * Defaults to true for backwards compatibility.
+   */
+  allowMouse?: boolean
+  /**
+   * When false, keyboard-shortcut capture is suppressed — keydown events are
+   * ignored. Defaults to true for backwards compatibility.
+   */
+  allowKeyboard?: boolean
 }
 
 export function ShortcutRecorder({
   value,
   mouseButton,
   onChange,
-  disabled = false
+  disabled = false,
+  allowMouse = true,
+  allowKeyboard = true,
 }: ShortcutRecorderProps): React.ReactElement {
   const [isRecording, setIsRecording] = useState(false)
   const [displayValue, setDisplayValue] = useState<string>('')
@@ -52,10 +65,13 @@ export function ShortcutRecorder({
     window.api.send(IPC.RESUME_HOTKEY)
   }, [])
 
-  // Listen for mouse button captures from iohook (main process)
+  // Listen for mouse button captures from iohook (main process).
+  // Skipped entirely when mouse capture is disabled for this recorder.
   useEffect(() => {
-    const unsub = window.api.on(IPC.MOUSE_BUTTON_CAPTURED, (macOSButton: number) => {
+    if (!allowMouse) return
+    const unsub = window.api.on(IPC.MOUSE_BUTTON_CAPTURED, (...args) => {
       if (!isRecordingRef.current) return
+      const macOSButton = args[0] as number
       // Don't call stopRecording() here — it sends RESUME_HOTKEY which races
       // with SET_SETTING. The SET_SETTING handler re-registers shortcuts already.
       isRecordingRef.current = false
@@ -63,18 +79,28 @@ export function ShortcutRecorder({
       onChange(null, macOSButton)
     })
     return () => { unsub?.() }
-  }, [onChange])
+  }, [onChange, allowMouse])
 
   const startRecording = useCallback(() => {
     if (disabled) return
     // Unregister the global hotkey so pressing it here doesn't trigger recording
     window.api.send(IPC.PAUSE_HOTKEY)
-    // Start iohook capture for mouse buttons (sees all buttons including 5+)
-    window.api.send(IPC.CAPTURE_MOUSE_BUTTON)
+    // Only kick off iohook mouse capture when mouse input is allowed —
+    // otherwise this recorder is keyboard-only and mouse capture would
+    // leak events from unrelated clicks.
+    if (allowMouse) {
+      window.api.send(IPC.CAPTURE_MOUSE_BUTTON)
+    }
     isRecordingRef.current = true
     setIsRecording(true)
-    setDisplayValue('Press keys or mouse button...')
-  }, [disabled])
+    setDisplayValue(
+      allowMouse && allowKeyboard
+        ? 'Press keys or mouse button...'
+        : allowMouse
+          ? 'Press a mouse button...'
+          : 'Press keys...'
+    )
+  }, [disabled, allowMouse, allowKeyboard])
 
   // If the settings window closes while the recorder is active, the hotkey
   // must be re-registered — otherwise it stays silently unregistered forever.
@@ -94,6 +120,15 @@ export function ShortcutRecorder({
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (!isRecording) return
+      // Keyboard capture disabled: still let Escape abort, but don't record keys.
+      if (!allowKeyboard) {
+        if (e.key === 'Escape') {
+          e.preventDefault()
+          e.stopPropagation()
+          stopRecording()
+        }
+        return
+      }
 
       e.preventDefault()
       e.stopPropagation()
@@ -126,7 +161,7 @@ export function ShortcutRecorder({
         stopRecording()
       }
     },
-    [isRecording, onChange, stopRecording]
+    [isRecording, onChange, stopRecording, allowKeyboard]
   )
 
   return (

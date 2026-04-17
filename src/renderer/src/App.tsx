@@ -248,7 +248,7 @@ function OverlayWindow(): React.ReactElement {
 
 const pipelineMachine = createPipelineMachine()
 
-function DictationApp(): React.ReactElement {
+function DictationApp(): React.ReactElement | null {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS)
   const [settingsLoaded, setSettingsLoaded] = useState(false)
   const [refinementSkipped, setRefinementSkipped] = useState(false)
@@ -276,7 +276,7 @@ function DictationApp(): React.ReactElement {
 
   // Subscribe to state machine transitions and log to DebugBus
   useEffect(() => {
-    const unsub = actorRef.subscribe((snapshot) => {
+    const subscription = actorRef.subscribe((snapshot) => {
       debugBus.current.push('pipeline', 'state_change', {
         state: snapshot.value,
         context: {
@@ -287,7 +287,9 @@ function DictationApp(): React.ReactElement {
         },
       })
     })
-    return unsub
+    // xstate .subscribe returns a Subscription object; React expects a void
+    // cleanup function.
+    return () => subscription.unsubscribe()
   }, [actorRef])
 
   // Load settings and listen for IPC events
@@ -524,7 +526,7 @@ function DictationApp(): React.ReactElement {
 
         console.log(`[DictationApp] PCM: ${result.samples.length} samples at ${result.sampleRate}Hz = ${(result.samples.length / result.sampleRate).toFixed(1)}s, ${pcmBytesKB}KB, peak: ${result.peakLevel.toFixed(4)}`)
 
-        debugBus.current.push('ipc', 'send', { channel: IPC.START_WHISPER, model: settings.localModel, pcmSizeKB })
+        debugBus.current.push('ipc', 'send', { channel: IPC.START_WHISPER, model: settings.localModel, pcmSizeKB: pcmBytesKB })
 
         // Phase 0 benchmark: emit IPC send timing with payload sizes
         debugBus.current.push('audio', 'timing', {

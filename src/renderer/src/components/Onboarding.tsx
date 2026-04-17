@@ -51,7 +51,8 @@ export function Onboarding({ onComplete, initialStep = 1 }: OnboardingProps): Re
   }
 
   useEffect(() => {
-    const unsubscribeProgress = window.api.on(IPC.DOWNLOAD_PROGRESS, (progress: { percent: number }) => {
+    const unsubscribeProgress = window.api.on(IPC.DOWNLOAD_PROGRESS, (...args) => {
+      const progress = args[0] as { percent: number }
       setDownloadProgress(progress.percent)
     })
 
