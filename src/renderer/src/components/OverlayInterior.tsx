@@ -87,19 +87,36 @@ export function OverlayInterior({
       )}
 
       {beamState === 'complete' && (
-        <div className="flex items-center justify-center px-3 h-full">
-          <svg className="w-3.5 h-3.5 text-[var(--color-state-complete)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-          </svg>
+        <div className="grid grid-cols-[22px_1fr_22px] items-center px-2.5 h-full w-full">
+          <div aria-hidden="true" />
+          {/* Checkmark scales in with a brief overshoot to read as a "burst"
+              alongside the colorful-variant beam flash below. */}
+          <div className="flex items-center justify-center">
+            <svg
+              className="w-4 h-4 text-[var(--color-state-complete)] pill-check-burst"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={3}
+              aria-label="Transcription complete"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <div aria-hidden="true" />
         </div>
       )}
 
       {beamState === 'error' && (
-        <div className="flex items-center gap-2 px-2.5 h-full">
+        <div className="flex items-center gap-2 px-2.5 h-full overflow-hidden">
           <svg className="w-4 h-4 text-[var(--color-state-error)] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
-          {errorMessage && <span className="text-white/90 text-xs">{errorMessage}</span>}
+          {errorMessage && (
+            <span className="text-white/90 text-xs truncate" title={errorMessage}>
+              {errorMessage}
+            </span>
+          )}
         </div>
       )}
     </div>
