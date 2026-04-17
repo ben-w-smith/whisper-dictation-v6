@@ -27,8 +27,29 @@ function useReducedMotion(): boolean {
   return reduced
 }
 
-const SILENCE_FLOOR = 0.05
-const SPEECH_CEIL = 0.45
+/**
+ * Amplitude mapping tuned against real post-AGC RMS values from our audio
+ * capture pipeline. `getAudioLevel()` returns the smoothed RMS of recent
+ * Float32 PCM samples on a mic stream with `autoGainControl: true`, so
+ * signal-level comes back heavily normalized: typical speech peaks at
+ * ~0.08–0.15, quiet speech at ~0.02, and AGC-floor silence at ~0.001.
+ *
+ * Previous calibration (floor 0.05, ceil 0.45) meant strength spent its life
+ * in the 0.0–0.2 range and the beam was effectively invisible even for loud
+ * speech. The new ceiling of 0.12 places normal conversation at or near peak
+ * strength, matching the brightness of beam.jakubantalik.com's demo.
+ *
+ * The sqrt curve boosts quiet signals so whispered speech still visibly
+ * modulates the beam instead of sitting under the floor.
+ *
+ * BASELINE_STRENGTH is the minimum strength we ever emit during active
+ * recording, so the aurora is always at least softly visible — the
+ * "grayscale, kind of there, softly moving" look we want during silence.
+ * Saturation (added in S2) takes the beam from gray→color on top of this.
+ */
+const SILENCE_FLOOR = 0.003
+const SPEECH_CEIL = 0.12
+const BASELINE_STRENGTH = 0.35
 const SMOOTHING = 0.22
 
 /**
@@ -65,8 +86,10 @@ export function BeamPill({ state, getAudioLevel, children }: BeamPillProps): Rea
     const tick = (): void => {
       levelRef.current += SMOOTHING * (getAudioLevel() - levelRef.current)
       const raw = levelRef.current
-      const s = Math.max(0, Math.min(1, (raw - SILENCE_FLOOR) / (SPEECH_CEIL - SILENCE_FLOOR)))
-      el?.style.setProperty('--beam-strength', s.toFixed(3))
+      const norm = Math.max(0, Math.min(1, (raw - SILENCE_FLOOR) / (SPEECH_CEIL - SILENCE_FLOOR)))
+      const curved = Math.sqrt(norm) // gamma ~0.5 lifts quiet speech
+      const strength = BASELINE_STRENGTH + (1 - BASELINE_STRENGTH) * curved
+      el?.style.setProperty('--beam-strength', strength.toFixed(3))
       rafRef.current = requestAnimationFrame(tick)
     }
     rafRef.current = requestAnimationFrame(tick)
