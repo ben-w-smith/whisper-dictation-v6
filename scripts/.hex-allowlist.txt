@@ -1,3 +1,10 @@
 src/renderer/src/components/ShortcutRecorder.tsx:#c4bdb4
 src/renderer/src/components/ShortcutRecorder.tsx:#ebe6df
 src/renderer/src/components/ToggleSwitch.tsx:#d6d1ca
+src/renderer/src/components/BeamPill.stories.tsx:#0f1014
+src/renderer/src/components/BeamPill.stories.tsx:#ef4444
+src/renderer/src/components/BeamPill.stories.tsx:#f87171
+src/renderer/src/components/BeamPill.stories.tsx:#93c5fd
+src/renderer/src/components/BeamPill.stories.tsx:#4ade80
+src/renderer/src/components/BeamPill.stories.tsx:#fbbf24
+src/renderer/src/components/Overlay.stories.tsx:#0f1014

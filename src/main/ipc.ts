@@ -137,7 +137,6 @@ export function registerIpcHandlers(): void {
             focusable: false,
             x: Math.round((screenWidth - 260) / 2),
             y: 20,
-            title: 'Whisper Overlay',
             webPreferences: {
               preload: join(__dirname, '../preload/index.js'),
               contextIsolation: true,
