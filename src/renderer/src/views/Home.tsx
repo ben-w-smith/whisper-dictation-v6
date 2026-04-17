@@ -1,14 +1,18 @@
-import React, { useState } from 'react'
-import type { HomePage } from '@shared/types'
+import React, { useState, useEffect, useCallback } from 'react'
+import type { HomePage, AppSettings } from '@shared/types'
 import { GeneralPage } from './home/GeneralPage'
+import { AppearancePage } from './home/AppearancePage'
 import { ModelPage } from './home/ModelPage'
 import { AIPage } from './home/AIPage'
 import { DictionaryPage } from './home/DictionaryPage'
 import { HistoryPage } from './home/HistoryPage'
 import { AboutPage } from './home/AboutPage'
+import { IPC } from '@shared/ipc'
+import { DEFAULT_SETTINGS } from '@shared/constants'
 
 const pages: { id: HomePage; label: string }[] = [
   { id: 'general', label: 'General' },
+  { id: 'appearance', label: 'Appearance' },
   { id: 'model', label: 'Model' },
   { id: 'ai', label: 'AI' },
   { id: 'dictionary', label: 'Dictionary' },
@@ -23,6 +27,25 @@ interface HomeProps {
 
 export function Home({ onClose, initialPage = 'general' }: HomeProps): React.ReactElement {
   const [activePage, setActivePage] = useState<HomePage>(initialPage)
+  const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS)
+
+  useEffect(() => {
+    window.api.invoke(IPC.GET_SETTINGS).then((s) => {
+      if (s) setSettings(s as AppSettings)
+    }).catch(() => {})
+    const unsub = window.api.on(IPC.SETTINGS_UPDATED, () => {
+      window.api.invoke(IPC.GET_SETTINGS).then((s) => {
+        if (s) setSettings(s as AppSettings)
+      }).catch(() => {})
+    })
+    return unsub
+  }, [])
+
+  const updateSetting = useCallback(<K extends keyof AppSettings>(key: K, value: AppSettings[K]) => {
+    const next = { ...settings, [key]: value }
+    setSettings(next)
+    window.api.invoke(IPC.SET_SETTING, key, value).catch(() => {})
+  }, [settings])
 
   const handleClose = () => {
     onClose?.()
@@ -72,6 +95,7 @@ export function Home({ onClose, initialPage = 'general' }: HomeProps): React.Rea
         <div className="flex-1 overflow-y-auto p-5">
           <div className="max-w-[640px]">
           {activePage === 'general' && <GeneralPage />}
+          {activePage === 'appearance' && <AppearancePage settings={settings} updateSetting={updateSetting} />}
           {activePage === 'model' && <ModelPage />}
           {activePage === 'ai' && <AIPage />}
           {activePage === 'dictionary' && <DictionaryPage />}
