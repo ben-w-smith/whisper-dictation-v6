@@ -16,6 +16,11 @@ export const DEFAULT_SETTINGS: AppSettings = {
   playSounds: true,
   onboardingComplete: false,
   dictionary: [],
+  theme: 'warm',
+  accent: 'teal',
+  radiusScale: 1.0,
+  ambient: 'none',
+  followSystemTheme: false,
 }
 
 // Audio
