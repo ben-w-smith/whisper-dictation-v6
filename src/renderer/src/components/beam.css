@@ -1,0 +1,99 @@
+@property --beam-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.beam-pill {
+  position: relative;
+  isolation: isolate;
+  --beam-opacity: 0.55;
+  --beam-glow: 6px;
+  --beam-color: #f87171;
+  --beam-halo: #fca5a5;
+  --beam-period: 2.8s;
+}
+
+.beam-pill::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: conic-gradient(
+    from var(--beam-angle),
+    transparent 0deg,
+    transparent 320deg,
+    var(--beam-halo) 340deg,
+    var(--beam-color) 355deg,
+    #ffffff 360deg,
+    var(--beam-color) 365deg,
+    var(--beam-halo) 380deg,
+    transparent 400deg
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  opacity: var(--beam-opacity);
+  filter: drop-shadow(0 0 var(--beam-glow) var(--beam-color));
+  animation: beam-rotate var(--beam-period) linear infinite;
+  pointer-events: none;
+  transition: opacity 120ms linear, filter 180ms linear;
+}
+
+@keyframes beam-rotate {
+  to { --beam-angle: 360deg; }
+}
+
+/* State variants — set on the root .beam-pill */
+.beam-pill[data-beam-state="transcribing"] {
+  --beam-color: #93c5fd;
+  --beam-halo: #60a5fa;
+  --beam-period: 1.6s;
+  --beam-opacity: 0.85;
+  --beam-glow: 6px;
+}
+
+.beam-pill[data-beam-state="complete"] {
+  --beam-color: #4ade80;
+  --beam-halo: #86efac;
+  --beam-period: 0.9s;
+  /* opacity managed via one-shot animation */
+}
+
+.beam-pill[data-beam-state="complete"]::before {
+  animation: beam-complete-flash 900ms ease-out forwards;
+}
+
+.beam-pill[data-beam-state="error"] {
+  --beam-color: #fbbf24;
+  --beam-halo: #f59e0b;
+  --beam-period: 3.5s;
+  --beam-opacity: 0.7;
+  --beam-glow: 6px;
+}
+
+.beam-pill[data-beam-state="error"]::before {
+  animation: beam-rotate 3.5s linear infinite, beam-error-shake 320ms ease-out;
+}
+
+@keyframes beam-complete-flash {
+  0%   { --beam-opacity: 0; --beam-glow: 0px; }
+  35%  { --beam-opacity: 1; --beam-glow: 18px; }
+  100% { --beam-opacity: 0; --beam-glow: 0px; }
+}
+
+@keyframes beam-error-shake {
+  0%, 100% { transform: translateX(0); }
+  25%      { transform: translateX(-2px); }
+  75%      { transform: translateX(2px); }
+}
+
+/* Reduced motion — halt rotation, audio-reactive opacity still works */
+@media (prefers-reduced-motion: reduce) {
+  .beam-pill::before {
+    animation: none !important;
+  }
+}
