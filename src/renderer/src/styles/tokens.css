@@ -368,6 +368,15 @@ html,
 body,
 #root {
   background: transparent;
+  /*
+   * Fill the window so descendants that opt into `h-full` / `height: 100%`
+   * actually have something to inherit from. Tailwind's `h-full` is
+   * `height: 100%`, which is a percentage of the computed parent height —
+   * without these three lines every overlay child collapses to 0 and
+   * absolute-positioned siblings render outside the visible window.
+   */
+  height: 100%;
+  margin: 0;
 }
 
 body {

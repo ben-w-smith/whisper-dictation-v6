@@ -1,67 +1,68 @@
 /**
  * Overlay pill surface + audio-reactive beam layering.
  *
- * DOM structure from BeamPill.tsx — three SIBLING layers inside the frame:
+ * DOM from BeamPill.tsx (three siblings in a fixed-size frame):
  *
- *   .beam-pill-frame                (aspect container; carries data-beam-state)
- *   ├── .beam-pill-shell            (z 0) visible translucent pill surface
- *   ├── .beam-pill-beam-wrap        (z 1) beam layer — masked, filterable
- *   │     └── BorderBeam wrapper    ([data-beam=...]; overflow:hidden, radius)
- *   └── .beam-pill-content          (z 2) interactive UI (buttons, etc.)
+ *   .beam-pill-frame         260×44 PINNED; carries visible bg/border/shadow
+ *   ├── .beam-pill-beam      inset:0 masked wrap → hosts <BorderBeam/>
+ *   │     └── [data-beam]    library wrapper + ::before/::after/[data-beam-bloom]
+ *   └── .beam-pill-content   inset:0 z:2; interactive UI
  *
- * The three layers MUST be siblings. An earlier revision nested the shell
- * inside the beam-wrap; when S7 added a `mask-image` to the wrap, the mask
- * composited through the shell's backdrop-filter and the pill rendered as
- * fully transparent. See BeamPill.tsx for the full postmortem.
+ * Postmortem (why the frame — not a nested shell — carries the background):
+ *   v2 had `.beam-pill-shell` (background) nested inside `.beam-pill-beam-wrap`
+ *   (horizontally masked). The mask composited through the shell's
+ *   backdrop-filter and rasterized the whole pill as transparent. Making the
+ *   shell a sibling of the masked wrap "should" have fixed it, but in
+ *   practice the shell kept rendering invisibly — likely because the root
+ *   `.beam-pill-frame` collapsed to 0 height (html/body/#root in this
+ *   renderer don't set `height:100%`), so every absolutely-positioned child
+ *   had nothing to stretch against.
  *
- * Filter/mask separation: any filter (grayscale, hue) applied to the beam
- * layer cannot touch the shell (z 0) or the UI (z 2), since those are
- * sibling subtrees with their own stacking contexts.
+ *   v3 (this file) pins the frame's width/height from JS and puts the
+ *   background directly on it. The beam wrap and content are still absolute
+ *   siblings, but now they have a real box to fill.
  */
 
 .beam-pill-frame {
   position: relative;
-  height: 100%;
-  width: 100%;
-}
-
-.beam-pill-shell {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
+  border-radius: 9999px;
   background: rgba(17, 17, 19, 0.78);
   -webkit-backdrop-filter: blur(20px) saturate(140%);
   backdrop-filter: blur(20px) saturate(140%);
-  border-radius: 9999px;
-  border: 1px inset rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.1),
     0 4px 16px rgba(0, 0, 0, 0.3);
+  /*
+   * Own stacking context so child z-index values resolve locally.
+   * Needed because `.beam-pill-content` is `position: absolute; z-index: 2`
+   * and must sit above the beam but below anything the rest of the app
+   * might later stack over the overlay window as a whole.
+   */
+  isolation: isolate;
 }
 
-.beam-pill-beam-wrap {
+.beam-pill-beam {
   position: absolute;
   inset: 0;
   z-index: 1;
   pointer-events: none;
   /*
-   * Clip the library's radial gradients to the pill shape. Without
-   * `overflow: hidden`, the bottom-edge bloom on the beam library spills
-   * outside the pill perimeter.
+   * Clip library radial gradients to the pill shape; `overflow: hidden`
+   * prevents the bottom-edge bloom from spilling outside the perimeter.
    */
   border-radius: 9999px;
   overflow: hidden;
   /*
    * Horizontal edge fade. Beam brightness ramps from 0 at the very left/
-   * right of the pill up to full across the middle ~75%, so the traveling
-   * highlight doesn't punch through behind the cancel (left) and stop /
-   * spinner (right) buttons. 22/260 ≈ 8.5% per button, plus a little
-   * padding; 14% → 86% lands the full-strength band just past the buttons
-   * on each side.
+   * right up to full across the middle, so the traveling highlight doesn't
+   * punch through behind the cancel (left) and stop/spinner (right) buttons.
+   * 22/260 ≈ 8.5% per button; 14%→86% lands the full-strength band just
+   * past the buttons on each side.
    *
-   * Because the shell is a sibling (not a descendant) of this element,
-   * masking here is safe: it only affects the beam pseudos and nothing
-   * else. The `-webkit-` prefix is kept for runtime robustness.
+   * Because the frame background is a PARENT (not descendant) of this
+   * element, masking here cannot composite through the pill's backdrop-
+   * filter — it only affects the beam pseudos.
    */
   -webkit-mask-image: linear-gradient(
     to right,
@@ -84,45 +85,38 @@
   inset: 0;
   z-index: 2;
   pointer-events: auto;
-  isolation: isolate;
 }
 
 /**
  * Saturation axis.
  *
- * BeamPill passes `staticColors` to the vendored BorderBeam, which means
- * the library emits NO hue-shift animation or static filter on its beam
- * pseudo-elements. That frees the `filter` property for us to drive from
- * the outside, which we do here.
+ * BeamPill passes `staticColors` to the vendored BorderBeam, so the library
+ * emits NO hue-shift animation or built-in filter on its beam pseudos — the
+ * `filter` property is ours to drive.
  *
  * `--beam-saturate` is written by BeamPill's rAF loop: 0 at silence,
- * 1 at speech peak. `filter: grayscale(calc(1 - X))` inverts that into
- * "gray at silence, full color at speech peak".
+ * 1 at speech peak. `grayscale(calc(1 - X))` inverts that to
+ * "gray at silence → full color at peak".
  *
- * This rule only matches inside `.beam-pill-beam-wrap`, so the pill
- * shell (also inside the wrap) gets desaturated too — but its background
- * is already a dark-neutral rgba, so there's no visible difference. The
- * pill CONTENT (X, stop button, spinner) is a sibling subtree and is
- * never filtered.
+ * Selector is scoped to `.beam-pill-beam`, so pill CONTENT (cancel, stop,
+ * spinner — a sibling subtree) is never desaturated.
  */
-.beam-pill-beam-wrap [data-beam][data-active]::before,
-.beam-pill-beam-wrap [data-beam][data-active]::after,
-.beam-pill-beam-wrap [data-beam][data-fading]::before,
-.beam-pill-beam-wrap [data-beam][data-fading]::after,
-.beam-pill-beam-wrap [data-beam][data-active] [data-beam-bloom],
-.beam-pill-beam-wrap [data-beam][data-fading] [data-beam-bloom] {
+.beam-pill-beam [data-beam][data-active]::before,
+.beam-pill-beam [data-beam][data-active]::after,
+.beam-pill-beam [data-beam][data-fading]::before,
+.beam-pill-beam [data-beam][data-fading]::after,
+.beam-pill-beam [data-beam][data-active] [data-beam-bloom],
+.beam-pill-beam [data-beam][data-fading] [data-beam-bloom] {
   filter: grayscale(calc(1 - var(--beam-saturate, 0)));
 }
 
 /**
- * Transcribing-state loading indicator. Replaces the stop button (same
- * 22×22px footprint in the pill's right slot) so the pill geometry stays
- * constant across state changes.
- *
- * Styling: classic 12-tick radial "sunburst" activity indicator. Each tick
- * is a child `span` with ascending opacity; the whole ring rotates in
- * `steps(12)` so the ticks appear to cascade around the circle once per
- * second. Mono gray on purpose — color would fight the ocean beam below.
+ * Transcribing-state loading indicator. 22×22 — same footprint as the stop
+ * button's right slot — so pill geometry stays constant across state
+ * changes. Classic 12-tick radial "sunburst": each tick is a child span
+ * with ascending opacity; the whole ring rotates in `steps(12)` so ticks
+ * cascade once per second. Mono gray on purpose — color would fight the
+ * ocean beam beneath it.
  */
 .pill-spinner {
   position: relative;
@@ -140,10 +134,8 @@
   border-radius: 0.75px;
   background: rgba(255, 255, 255, 0.9);
   /*
-   * transform-origin = the container's geometric center relative to this
-   * span's box. Container is 22×22, span is positioned at top:2 with a
-   * 1.5×5 box, so the center sits at (50% of span width, span height - 3
-   * + distance-to-container-center) = (50%, 9px) from the span's origin.
+   * Container is 22×22; span sits at top:2 with a 1.5×5 box. 9px = pivot
+   * down to the container's geometric center from the span's origin.
    */
   transform-origin: 50% 9px;
 }
@@ -156,10 +148,8 @@
 
 /**
  * Complete-state checkmark burst. Pairs with the colorful-variant beam
- * flash around the perimeter to give the brief "done!" moment a little
- * punch. Overshoot scale (1→1.25→1) + fade-in; runs once on mount since
- * the complete state itself only shows for ~500ms before the overlay
- * dismisses.
+ * flash around the perimeter. Overshoot scale (1→1.25→1) + fade-in; runs
+ * once on mount since the complete state only renders for ~500ms.
  */
 .pill-check-burst {
   animation: pill-check-burst 320ms cubic-bezier(0.2, 0.9, 0.3, 1.3) both;
@@ -188,10 +178,9 @@
     animation: none;
   }
   /*
-   * Without the rotation, 12 faded ticks would all be visible at once as
-   * a static ring of dots, which reads as "this is a donut" instead of
-   * "this is loading". Hide the low-opacity ticks so only the top few
-   * brighter ticks remain — still recognizable as an in-progress indicator.
+   * Without rotation, 12 faded ticks read as a static donut rather than
+   * "loading". Keep only the top few brighter ticks so it's still
+   * recognizable as in-progress.
    */
   .pill-spinner span:nth-child(n + 5) {
     opacity: 0;

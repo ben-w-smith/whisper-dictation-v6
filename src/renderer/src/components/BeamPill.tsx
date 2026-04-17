@@ -42,15 +42,6 @@ const SPEECH_CEIL = 0.12
 const BASELINE_STRENGTH = 0.35
 const SMOOTHING = 0.22
 
-/**
- * Per-state static beam configuration. Recording drives strength via rAF
- * (see effect below); the other three states are fixed so the library
- * can own `--beam-strength` directly through its `strength` prop.
- *
- * `saturate` is our own axis (not a library prop) — see beam.css. Values
- * outside recording are 1 so the beam shows in full color for those
- * signal states; saturation reactivity is a recording-only signal.
- */
 interface BeamModeConfig {
   colorVariant: BorderBeamColorVariant
   strength: number
@@ -59,70 +50,63 @@ interface BeamModeConfig {
 const BEAM_MODES: Record<PillState, BeamModeConfig> = {
   recording:    { colorVariant: 'colorful', strength: 0,    saturate: 0 }, // rAF overrides both
   transcribing: { colorVariant: 'ocean',    strength: 0.55, saturate: 1 },
-  complete:     { colorVariant: 'colorful', strength: 0.9,  saturate: 1 }, // bright flash, ~500ms
+  complete:     { colorVariant: 'colorful', strength: 0.9,  saturate: 1 },
   error:        { colorVariant: 'sunset',   strength: 0.55, saturate: 1 },
 }
 
 /**
- * Pill dimensions. These are the fixed render size of the overlay window
- * (see ipc.ts: 260×44). They're used to pin the border radius of the
- * BorderBeam wrapper to the same pill-shape the shell uses.
+ * Fixed pill geometry. The overlay window itself is 260×44 (see ipc.ts), but
+ * we pin the pill explicitly so layout never collapses to 0 if html/body/#root
+ * don't have height:100% set in the renderer's global CSS (which they don't).
+ *
+ * Pinning these also lets BorderBeam skip its auto-detection pass.
  */
-const PILL_BORDER_RADIUS = 22
+const PILL_WIDTH = 260
+const PILL_HEIGHT = 44
+const PILL_BORDER_RADIUS = PILL_HEIGHT / 2
 
 /**
- * Audio-reactive pill wrapper.
+ * Audio-reactive pill.
  *
- * Layering (all three layers are SIBLINGS inside the frame — this matters;
- * see the postmortem at the bottom of this comment):
+ * Render tree:
  *
- *   .beam-pill-frame
- *   ├── .beam-pill-shell        (z 0) visible translucent pill surface
- *   ├── .beam-pill-beam-wrap    (z 1) beam layer — masked + filterable
- *   │     └── <BorderBeam>       (vendored; owns ::before/::after/bloom)
- *   └── .beam-pill-content      (z 2) absolutely positioned UI
+ *   .beam-pill-frame          (260×44 pinned; carries visible background, border, shadow)
+ *   ├── .beam-pill-beam       (inset:0; masks horizontally; hosts <BorderBeam/>)
+ *   │     └── [data-beam]     (vendored library wrapper + its ::before/::after/[data-beam-bloom])
+ *   └── .beam-pill-content    (inset:0; z:2; interactive UI)
  *
- * Per-state behavior:
+ * Why this shape (postmortem):
+ *   v1: single div carried background + BorderBeam as child. Worked, but
+ *       grayscale filter for silent state desaturated the UI too.
+ *   v2: split beam into its own wrap with the shell nested INSIDE. Horizontal
+ *       edge-fade mask on the wrap then composited through the shell's
+ *       backdrop-filter and rasterized the whole pill transparent (user
+ *       reported "completely see-through").
+ *   v3 (this): background/border/shadow go directly on `.beam-pill-frame`,
+ *       so they're never inside the masked beam subtree. Beam lives in its
+ *       own absolutely-positioned sibling; its mask only affects the beam
+ *       pseudo-elements. Content is a third sibling on top.
  *
- *   recording    — colorVariant='colorful', rAF drives amplitude. Strength
- *                  and saturation both written by the rAF tick; BorderBeam
- *                  strength prop is 0 (clobbered) and `--beam-saturate` is
- *                  a sibling axis our CSS maps to `filter: grayscale()` on
- *                  the beam pseudo-elements. Silence = gray + faint,
- *                  speech = colorful + bright.
- *   transcribing — colorVariant='ocean', strength 0.55, full saturation.
- *                  Library animates the travel/breathe/spike keyframes on
- *                  its own; no audio reactivity.
- *   complete     — colorVariant='colorful', strength 0.9, full saturation.
- *                  A bright full-spectrum flash while the checkmark shows;
- *                  App auto-dismisses the overlay after 500ms.
- *   error        — colorVariant='sunset', strength 0.55, full saturation.
- *                  Warm amber continues while the error icon is displayed.
+ * Per-state beam behavior:
+ *   recording    — colorful variant; rAF drives `--beam-strength` +
+ *                  `--beam-saturate` (grayscale at silence → color at speech).
+ *   transcribing — ocean variant at fixed strength 0.55; no audio reactivity.
+ *   complete     — bright colorful flash (strength 0.9) for ~500ms.
+ *   error        — sunset variant at 0.55; sticks while the error is shown.
  *
- * prefers-reduced-motion: beam inactive entirely (no travel animation).
- * The interior UI still renders its state-specific content.
- *
- * Why are the shell and beam SIBLINGS (not parent/child)? An earlier
- * revision nested the shell inside `.beam-pill-beam-wrap`. S7 then added
- * a horizontal edge-fade `mask-image` to that wrap (so the traveling beam
- * wouldn't punch through behind the buttons). But `mask-image` composites
- * the entire subtree, and with `backdrop-filter` + translucent rgba on
- * the shell, the mask-compose + backdrop-filter interaction rasterized
- * the shell to effectively transparent — the pill looked completely
- * see-through. Separating the shell out and applying the mask only to
- * the beam layer fixes that: the shell is fully opaque in its own right,
- * and only the beam's edges fade.
+ * prefers-reduced-motion: beam is `active={false}`, no rAF, no travel
+ * animation. Interior content still renders its state-specific UI.
  */
 export function BeamPill({ state, getAudioLevel, children }: BeamPillProps): React.ReactElement {
-  const wrapperRef = useRef<HTMLDivElement | null>(null)
+  const beamRef = useRef<HTMLDivElement | null>(null)
   const levelRef = useRef(0)
   const reducedMotion = useReducedMotion()
 
-  const mode = BEAM_MODES[state]
+  const mode = BEAM_MODES[state] ?? BEAM_MODES.recording
   const beamActive = !reducedMotion
 
   useEffect(() => {
-    const el = wrapperRef.current
+    const el = beamRef.current
     if (!el || !beamActive) {
       el?.style.removeProperty('--beam-strength')
       el?.style.removeProperty('--beam-saturate')
@@ -130,9 +114,6 @@ export function BeamPill({ state, getAudioLevel, children }: BeamPillProps): Rea
       return
     }
     if (state === 'recording') {
-      // rAF loop — amplitude drives both strength (visibility) and saturate
-      // (color vs. gray). Overrides the library's inline --beam-strength,
-      // which is why `strength={0}` is passed on the BorderBeam prop.
       let raf = 0
       const tick = (): void => {
         levelRef.current += SMOOTHING * (getAudioLevel() - levelRef.current)
@@ -151,8 +132,6 @@ export function BeamPill({ state, getAudioLevel, children }: BeamPillProps): Rea
         el.style.removeProperty('--beam-saturate')
       }
     }
-    // Non-recording states: library owns strength via prop; we just set
-    // the saturation axis so the CSS grayscale filter resolves to color.
     el.style.setProperty('--beam-saturate', mode.saturate.toFixed(3))
     return () => {
       el.style.removeProperty('--beam-saturate')
@@ -160,18 +139,14 @@ export function BeamPill({ state, getAudioLevel, children }: BeamPillProps): Rea
   }, [state, beamActive, getAudioLevel, mode.saturate])
 
   return (
-    <div className="beam-pill-frame" data-beam-state={state}>
-      {/* Layer 0: visible pill surface. Independent of the beam so it
-          stays fully opaque regardless of the beam layer's mask/filter. */}
-      <div className="beam-pill-shell" aria-hidden="true" />
-
-      {/* Layer 1: beam. Masked to fade near the left/right button slots
-          so the traveling highlight doesn't punch through behind them.
-          `overflow: hidden` on the wrap clips the library's internal
-          radial gradients to the pill shape. */}
-      <div className="beam-pill-beam-wrap" aria-hidden="true">
+    <div
+      className="beam-pill-frame"
+      data-beam-state={state}
+      style={{ width: PILL_WIDTH, height: PILL_HEIGHT }}
+    >
+      <div className="beam-pill-beam" aria-hidden="true">
         <BorderBeam
-          ref={wrapperRef}
+          ref={beamRef}
           size="line"
           borderRadius={PILL_BORDER_RADIUS}
           colorVariant={mode.colorVariant}
@@ -181,15 +156,16 @@ export function BeamPill({ state, getAudioLevel, children }: BeamPillProps): Rea
           strength={mode.strength}
           style={{ width: '100%', height: '100%' }}
         >
-          {/* The library's type declares `children` as required. We don't
-              have anything to wrap (the shell is a sibling layer), so this
-              is just an empty placeholder. */}
-          <></>
+          {/*
+            The library declares `children` required and uses the first child's
+            border-radius for auto-detection. We pass an empty fixed-radius
+            placeholder so auto-detect (even though we also pass `borderRadius`
+            explicitly) has something sensible to measure.
+          */}
+          <div style={{ width: '100%', height: '100%', borderRadius: PILL_BORDER_RADIUS }} />
         </BorderBeam>
       </div>
 
-      {/* Layer 2: interactive UI. isolation: isolate in CSS keeps this
-          subtree from ever being affected by beam-layer filters. */}
       <div className="beam-pill-content" role="status" aria-live="polite">
         {children}
       </div>
