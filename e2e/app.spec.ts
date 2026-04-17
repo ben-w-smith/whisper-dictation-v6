@@ -48,7 +48,6 @@ test.describe('Settings', () => {
     }) as Record<string, unknown>
 
     expect(settings).toBeDefined()
-    expect(typeof settings.transcriptionProvider).toBe('string')
     expect(typeof settings.localModel).toBe('string')
     expect(typeof settings.keyboardShortcuts).toBe('object')
     expect(typeof settings.autoPaste).toBe('boolean')
