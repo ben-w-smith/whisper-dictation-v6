@@ -19,9 +19,9 @@
     "lint": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "lint:hex": "bash scripts/check-hex-colors.sh",
     "lint:all": "pnpm lint && pnpm lint:hex",
-    "pack": "electron-builder --dir",
-    "dist": "electron-builder",
-    "app": "electron-vite build && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --dir --config.mac.hardenedRuntime=false && \"dist/mac-arm64/Whisper Dictation.app/Contents/MacOS/Whisper Dictation\"",
+    "pack": "npm_config_python=/opt/homebrew/bin/python3.11 electron-builder --dir",
+    "dist": "npm_config_python=/opt/homebrew/bin/python3.11 electron-builder",
+    "app": "electron-vite build && CSC_IDENTITY_AUTO_DISCOVERY=false npm_config_python=/opt/homebrew/bin/python3.11 electron-builder --dir --config.mac.hardenedRuntime=false && \"dist/mac-arm64/Whisper Dictation.app/Contents/MacOS/Whisper Dictation\"",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "screenshot": "npx tsx scripts/screenshot.ts"
