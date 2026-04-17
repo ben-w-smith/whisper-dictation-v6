@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react'
+import React, { useEffect, useCallback, useRef } from 'react'
 import type { ActorStateFrom } from 'xstate'
 import type { PipelineMachine } from '@renderer/state'
 import { BeamPill } from './BeamPill'
@@ -14,10 +14,16 @@ export function Overlay({ state, elapsedMs: externalElapsedMs, send }: OverlayPr
   const { audioLevels } = state.context
   const elapsedMs = externalElapsedMs ?? state.context.elapsedMs
 
+  // Mirror App.tsx pattern: read audio levels from a ref so getAudioLevel
+  // has empty deps and doesn't restart BeamPill's rAF loop every 100ms
+  const audioLevelsRef = useRef<number[]>([])
+  useEffect(() => { audioLevelsRef.current = audioLevels }, [audioLevels])
+
   const getAudioLevel = useCallback(() => {
-    if (audioLevels.length === 0) return 0
-    return audioLevels.reduce((a, b) => a + b, 0) / audioLevels.length
-  }, [audioLevels])
+    const levels = audioLevelsRef.current
+    if (levels.length === 0) return 0
+    return levels.reduce((a, b) => a + b, 0) / levels.length
+  }, [])
 
   const handleCancel = useCallback(() => {
     send({ type: 'CANCEL' })
