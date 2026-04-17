@@ -41,16 +41,6 @@ export const GGUF_META_FILE = 'gguf-meta.json'
 export const COMPLETE_DISPLAY_MS = 500
 export const ERROR_DISPLAY_MS = 8000
 
-// Overlay waveform gradient colors (left to right across 16 bars)
-export const WAVEFORM_GRADIENT = [
-  '#14b8a6', '#2dd4bf', '#5eead4', '#6ee7b7',
-  '#a78bfa', '#8b5cf6', '#7c3aed', '#a855f7',
-  '#c084fc', '#d946ef', '#e879f9', '#ec4899',
-  '#f472b6', '#fb7185', '#fda4af', '#fecdd3',
-] as const
-
-export const WAVEFORM_BAR_COUNT = 16
-
 // Design tokens
 export const DESIGN_TOKENS = {
   color: {
