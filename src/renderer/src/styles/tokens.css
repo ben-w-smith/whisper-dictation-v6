@@ -65,6 +65,12 @@
   --color-complete: #22c55e;
   --color-error: #f97316;
 
+  /* State-semantic colors — intentionally theme-independent (per themeable-foundation §3.5) */
+  --color-state-recording:    #f87171;
+  --color-state-transcribing: #93c5fd;
+  --color-state-complete:     #4ade80;
+  --color-state-error:        #fbbf24;
+
   /* Focus */
   --color-focus-ring: rgba(13, 148, 136, 0.3);
 

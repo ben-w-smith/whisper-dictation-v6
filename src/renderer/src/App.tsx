@@ -163,7 +163,7 @@ function OverlayWindow(): React.ReactElement {
               </button>
 
               {/* Status dot — solid red, pulses */}
-              <div className="w-[6px] h-[6px] rounded-full bg-[#f87171] animate-[beam-status-pulse_1.4s_linear_infinite]" />
+              <div className="w-[6px] h-[6px] rounded-full bg-[var(--color-state-recording)] animate-[beam-status-pulse_1.4s_linear_infinite]" />
 
               {/* Elapsed timer */}
               <span
@@ -186,14 +186,14 @@ function OverlayWindow(): React.ReactElement {
 
           {overlayState === 'transcribing' && (
             <div className="flex items-center gap-2 px-2.5 h-full">
-              <div className="w-[6px] h-[6px] rounded-full bg-[#93c5fd]" />
+              <div className="w-[6px] h-[6px] rounded-full bg-[var(--color-state-transcribing)]" />
               <span className="font-mono tabular-nums text-[11px] text-white/70 select-none">{timerDisplay}</span>
             </div>
           )}
 
           {overlayState === 'complete' && (
             <div className="flex items-center justify-center px-3 h-full">
-              <svg className="w-3.5 h-3.5 text-[#4ade80]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+              <svg className="w-3.5 h-3.5 text-[var(--color-state-complete)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
             </div>
@@ -201,7 +201,7 @@ function OverlayWindow(): React.ReactElement {
 
           {overlayState === 'error' && (
             <div className="flex items-center justify-center px-3 h-full">
-              <svg className="w-4 h-4 text-[#fbbf24]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-4 h-4 text-[var(--color-state-error)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
             </div>

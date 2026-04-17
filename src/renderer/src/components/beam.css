@@ -9,7 +9,7 @@
   isolation: isolate;
   --beam-opacity: 0.55;
   --beam-glow: 6px;
-  --beam-color: #f87171;
+  --beam-color: var(--color-state-recording);
   --beam-halo: #fca5a5;
   --beam-period: 2.8s;
 }
@@ -49,7 +49,7 @@
 
 /* State variants — set on the root .beam-pill */
 .beam-pill[data-beam-state="transcribing"] {
-  --beam-color: #93c5fd;
+  --beam-color: var(--color-state-transcribing);
   --beam-halo: #60a5fa;
   --beam-period: 1.6s;
   --beam-opacity: 0.85;
@@ -57,7 +57,7 @@
 }
 
 .beam-pill[data-beam-state="complete"] {
-  --beam-color: #4ade80;
+  --beam-color: var(--color-state-complete);
   --beam-halo: #86efac;
   --beam-period: 0.9s;
   /* opacity managed via one-shot animation */
@@ -68,7 +68,7 @@
 }
 
 .beam-pill[data-beam-state="error"] {
-  --beam-color: #fbbf24;
+  --beam-color: var(--color-state-error);
   --beam-halo: #f59e0b;
   --beam-period: 3.5s;
   --beam-opacity: 0.7;
