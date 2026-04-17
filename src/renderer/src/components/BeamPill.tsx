@@ -64,14 +64,23 @@ const BEAM_MODES: Record<PillState, BeamModeConfig> = {
 }
 
 /**
+ * Pill dimensions. These are the fixed render size of the overlay window
+ * (see ipc.ts: 260×44). They're used to pin the border radius of the
+ * BorderBeam wrapper to the same pill-shape the shell uses.
+ */
+const PILL_BORDER_RADIUS = 22
+
+/**
  * Audio-reactive pill wrapper.
  *
- * Layering:
+ * Layering (all three layers are SIBLINGS inside the frame — this matters;
+ * see the postmortem at the bottom of this comment):
+ *
  *   .beam-pill-frame
- *   ├── .beam-pill-beam-wrap    (aria-hidden; filter: grayscale applied here)
+ *   ├── .beam-pill-shell        (z 0) visible translucent pill surface
+ *   ├── .beam-pill-beam-wrap    (z 1) beam layer — masked + filterable
  *   │     └── <BorderBeam>       (vendored; owns ::before/::after/bloom)
- *   │           └── .beam-pill-shell  (pill surface, carries radius)
- *   └── .beam-pill-content       (absolutely positioned UI, z:1, un-filtered)
+ *   └── .beam-pill-content      (z 2) absolutely positioned UI
  *
  * Per-state behavior:
  *
@@ -92,6 +101,17 @@ const BEAM_MODES: Record<PillState, BeamModeConfig> = {
  *
  * prefers-reduced-motion: beam inactive entirely (no travel animation).
  * The interior UI still renders its state-specific content.
+ *
+ * Why are the shell and beam SIBLINGS (not parent/child)? An earlier
+ * revision nested the shell inside `.beam-pill-beam-wrap`. S7 then added
+ * a horizontal edge-fade `mask-image` to that wrap (so the traveling beam
+ * wouldn't punch through behind the buttons). But `mask-image` composites
+ * the entire subtree, and with `backdrop-filter` + translucent rgba on
+ * the shell, the mask-compose + backdrop-filter interaction rasterized
+ * the shell to effectively transparent — the pill looked completely
+ * see-through. Separating the shell out and applying the mask only to
+ * the beam layer fixes that: the shell is fully opaque in its own right,
+ * and only the beam's edges fade.
  */
 export function BeamPill({ state, getAudioLevel, children }: BeamPillProps): React.ReactElement {
   const wrapperRef = useRef<HTMLDivElement | null>(null)
@@ -141,10 +161,19 @@ export function BeamPill({ state, getAudioLevel, children }: BeamPillProps): Rea
 
   return (
     <div className="beam-pill-frame" data-beam-state={state}>
+      {/* Layer 0: visible pill surface. Independent of the beam so it
+          stays fully opaque regardless of the beam layer's mask/filter. */}
+      <div className="beam-pill-shell" aria-hidden="true" />
+
+      {/* Layer 1: beam. Masked to fade near the left/right button slots
+          so the traveling highlight doesn't punch through behind them.
+          `overflow: hidden` on the wrap clips the library's internal
+          radial gradients to the pill shape. */}
       <div className="beam-pill-beam-wrap" aria-hidden="true">
         <BorderBeam
           ref={wrapperRef}
           size="line"
+          borderRadius={PILL_BORDER_RADIUS}
           colorVariant={mode.colorVariant}
           theme="dark"
           staticColors
@@ -152,9 +181,15 @@ export function BeamPill({ state, getAudioLevel, children }: BeamPillProps): Rea
           strength={mode.strength}
           style={{ width: '100%', height: '100%' }}
         >
-          <div className="beam-pill-shell" />
+          {/* The library's type declares `children` as required. We don't
+              have anything to wrap (the shell is a sibling layer), so this
+              is just an empty placeholder. */}
+          <></>
         </BorderBeam>
       </div>
+
+      {/* Layer 2: interactive UI. isolation: isolate in CSS keeps this
+          subtree from ever being affected by beam-layer filters. */}
       <div className="beam-pill-content" role="status" aria-live="polite">
         {children}
       </div>

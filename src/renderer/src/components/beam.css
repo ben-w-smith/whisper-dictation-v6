@@ -1,24 +1,22 @@
 /**
  * Overlay pill surface + audio-reactive beam layering.
  *
- * DOM structure from BeamPill.tsx:
+ * DOM structure from BeamPill.tsx — three SIBLING layers inside the frame:
  *
  *   .beam-pill-frame                (aspect container; carries data-beam-state)
- *   ├── .beam-pill-beam-wrap        (aria-hidden beam layer; may be masked)
+ *   ├── .beam-pill-shell            (z 0) visible translucent pill surface
+ *   ├── .beam-pill-beam-wrap        (z 1) beam layer — masked, filterable
  *   │     └── BorderBeam wrapper    ([data-beam=...]; overflow:hidden, radius)
- *   │           └── .beam-pill-shell (visible pill surface, carries radius)
- *   └── .beam-pill-content          (absolute-positioned UI layer, z 1)
+ *   └── .beam-pill-content          (z 2) interactive UI (buttons, etc.)
  *
- * The pill surface and the vendored beam live in one subtree; the real UI
- * (status dot, buttons) lives in a sibling absolute-positioned layer. That
- * way, any filter we apply to the beam subtree (e.g. grayscale) does NOT
- * desaturate the X button, stop button, or the backdrop-filtered pixels
- * visible through the translucent pill.
+ * The three layers MUST be siblings. An earlier revision nested the shell
+ * inside the beam-wrap; when S7 added a `mask-image` to the wrap, the mask
+ * composited through the shell's backdrop-filter and the pill rendered as
+ * fully transparent. See BeamPill.tsx for the full postmortem.
  *
- * The vendored library emits its own CSS into a <style> tag at mount time;
- * nothing in this file needs to interact with it beyond exposing the pill
- * shell as a first child with border-radius for auto-detection, and
- * overriding the filter on the beam pseudo-elements (see bottom).
+ * Filter/mask separation: any filter (grayscale, hue) applied to the beam
+ * layer cannot touch the shell (z 0) or the UI (z 2), since those are
+ * sibling subtrees with their own stacking contexts.
  */
 
 .beam-pill-frame {
@@ -27,10 +25,32 @@
   width: 100%;
 }
 
+.beam-pill-shell {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: rgba(17, 17, 19, 0.78);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  backdrop-filter: blur(20px) saturate(140%);
+  border-radius: 9999px;
+  border: 1px inset rgba(255, 255, 255, 0.06);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.1),
+    0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
 .beam-pill-beam-wrap {
   position: absolute;
   inset: 0;
+  z-index: 1;
   pointer-events: none;
+  /*
+   * Clip the library's radial gradients to the pill shape. Without
+   * `overflow: hidden`, the bottom-edge bloom on the beam library spills
+   * outside the pill perimeter.
+   */
+  border-radius: 9999px;
+  overflow: hidden;
   /*
    * Horizontal edge fade. Beam brightness ramps from 0 at the very left/
    * right of the pill up to full across the middle ~75%, so the traveling
@@ -39,10 +59,9 @@
    * padding; 14% → 86% lands the full-strength band just past the buttons
    * on each side.
    *
-   * `mask-composite` isn't needed — we only have the one mask layer. The
-   * `-webkit-` prefix is for older Chromium without the unprefixed prop;
-   * Electron's current Chromium supports both, but keeping the prefix
-   * avoids a rendering surprise if the runtime is ever older.
+   * Because the shell is a sibling (not a descendant) of this element,
+   * masking here is safe: it only affects the beam pseudos and nothing
+   * else. The `-webkit-` prefix is kept for runtime robustness.
    */
   -webkit-mask-image: linear-gradient(
     to right,
@@ -60,24 +79,11 @@
   );
 }
 
-.beam-pill-shell {
-  height: 100%;
-  width: 100%;
-  background: rgba(17, 17, 19, 0.78);
-  -webkit-backdrop-filter: blur(20px) saturate(140%);
-  backdrop-filter: blur(20px) saturate(140%);
-  border-radius: 9999px;
-  border: 1px inset rgba(255, 255, 255, 0.06);
-  box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.1),
-    0 4px 16px rgba(0, 0, 0, 0.3);
-}
-
 .beam-pill-content {
   position: absolute;
   inset: 0;
+  z-index: 2;
   pointer-events: auto;
-  z-index: 1;
   isolation: isolate;
 }
 
