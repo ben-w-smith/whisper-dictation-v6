@@ -218,12 +218,13 @@ export function registerIpcHandlers(): void {
 
   // Start transcription — receives raw Float32 PCM from renderer via structured clone
   ipcMain.handle(IPC.START_WHISPER, async (_event, payload: { samples: ArrayBuffer; sampleRate: number; model: LocalModel }): Promise<string> => {
+    const { samples, sampleRate, model } = payload
     // Get current settings for provider and API key
     const settings = await getSettings()
 
     // Encode PCM to WAV in the main process (no base64 round-trip)
-    const float32 = new Float32Array(payload.samples)
-    const wavBuffer = Buffer.from(float32ToWav(float32, payload.sampleRate))
+    const float32 = new Float32Array(samples)
+    const wavBuffer = Buffer.from(float32ToWav(float32, sampleRate))
     const tempDir = join(tmpdir(), 'whisper-dictation')
     await mkdir(tempDir, { recursive: true })
     const audioPath = join(tempDir, `${randomUUID()}.wav`)
