@@ -1,0 +1,165 @@
+---
+description: Rules for editing the overlay pill, BeamPill, vendored border-beam, and root-level CSS that the overlay depends on
+globs: ["src/renderer/src/components/BeamPill.tsx", "src/renderer/src/components/beam.css", "src/renderer/src/components/Overlay.tsx", "src/renderer/src/components/OverlayInterior.tsx", "src/renderer/src/components/PillSpinner.tsx", "src/renderer/src/components/BeamPill.stories.tsx", "src/renderer/src/components/Overlay.stories.tsx", "src/renderer/src/vendor/border-beam/**", "src/renderer/src/styles/tokens.css"]
+alwaysApply: false
+---
+
+# Overlay pill rules
+
+These rules exist because the overlay pill ate a week of engineering time to
+several different agents. The architecture has non-obvious constraints that
+look like "style choices" and get undone. Full postmortem:
+`docs/retros/2026-04-17-overlay-pill-redesign.md`.
+
+Read that retro once before your first edit in this area. It explains *why*
+each rule below exists.
+
+## Load-bearing invariants (do not remove)
+
+1. **`html, body, #root { height: 100%; margin: 0 }` in `tokens.css`.** The
+   overlay window's body has no content beyond the pill; without explicit
+   heights, Tailwind's `h-full` collapses every overlay wrapper to 0. The
+   pill then either rasterizes at 0×0 or escapes the window via `flex
+   items-center` around a 0-height box. This is the bug that made the pill
+   appear "completely see-through" — the DOM was fine, the paint box was 0.
+2. **`BeamPill` pins its own width/height via inline style**
+   (`PILL_WIDTH × PILL_HEIGHT`). Do not rewrite this to `w-full h-full`.
+   The pill must render at 260×44 regardless of any parent sizing mistake —
+   (1) is a defense in depth, this is a second defense.
+3. **`.beam-pill-frame` carries the visible surface** (background,
+   backdrop-filter, border, box-shadow). The beam layer is a sibling, not
+   an ancestor, of the pill's background. Nesting the background inside
+   the masked beam layer rasterizes it transparent when the horizontal
+   edge-fade mask interacts with `backdrop-filter`.
+4. **Only two children under `.beam-pill-frame`:** `.beam-pill-beam`
+   (masked, absolutely-positioned beam host) and `.beam-pill-content`
+   (absolutely-positioned interactive UI). Do not reintroduce a third
+   "shell" layer. If you need more visual depth, paint it on the frame or
+   as a pseudo-element of the frame.
+5. **Overlay window is 260×44.** If you change dimensions, update both
+   `ipc.ts` (`BrowserWindow` create options) and `BeamPill.tsx`
+   (`PILL_WIDTH`, `PILL_HEIGHT`). They must stay in lockstep.
+
+## Vendored `border-beam` — contract, not a fork
+
+Location: `src/renderer/src/vendor/border-beam/`. Provenance and upgrade
+policy are in `VENDORED.md` there. Hard rules:
+
+1. **Do not modify the vendored library files directly.** If you need a
+   change, wrap it from `BeamPill.tsx`. Library files are a pristine copy
+   of `Jakubantalik/border-beam@1.0.1` and must remain easy to re-sync.
+2. **Always pass `staticColors`.** We drive the beam's saturation from the
+   outside via `--beam-saturate` + a `filter: grayscale(...)` rule in
+   `beam.css`. The library's own hue-shift animation fights that; turning
+   it off is mandatory for our look.
+3. **Always pass `borderRadius` explicitly.** The library's auto-detect
+   walks `firstElementChild`'s computed radius. That works only if the
+   child is sized; we pass a fixed-radius placeholder, which is
+   sufficient, but explicit `borderRadius={PILL_BORDER_RADIUS}` skips
+   auto-detect entirely and is more robust.
+4. **`strength` prop writes `--beam-strength` as an inline style on the
+   beam root.** Do not try to imperatively set `--beam-strength` *and*
+   pass a non-zero `strength` prop for the same state. React reconciliation
+   will overwrite the imperative value. The current contract:
+   - Audio-reactive states (`recording`): pass `strength={0}` to the prop,
+     imperatively set `--beam-strength` from the rAF loop in `BeamPill`.
+   - Static states (`transcribing`, `complete`, `error`): pass the fixed
+     strength via the `strength` prop; do not drive an rAF loop.
+5. **`children` is required.** We pass an empty sized placeholder div so
+   the library's MutationObserver has something to measure. Don't pass
+   `null` / `undefined` / `<></>` — it widens the type surface we rely on.
+
+## Audio amplitude mapping (do not move without measuring)
+
+`BeamPill.tsx` maps post-AGC mic RMS to beam strength/saturation:
+
+```
+SILENCE_FLOOR       = 0.003
+SPEECH_CEIL         = 0.12
+BASELINE_STRENGTH   = 0.35    // gray beam still visible at silence
+SMOOTHING           = 0.22    // exponential smoothing per frame
+```
+
+These numbers come from real traces of our capture pipeline with Web Audio
+`autoGainControl: true`. If you change them, verify against a real
+recording (use `pnpm app`, dictate normally, read the post-smoothing
+`levelRef` values from DevTools). Do not copy numbers from other codebases
+or the `beam.jakubantalik.com` demo — their input range is different.
+
+## Two render sites for `BeamPill`
+
+`BeamPill` is rendered in two places:
+
+- `src/renderer/src/components/Overlay.tsx` — consumed by `DictationApp`
+  (hidden background window). Not visible, but React still runs the
+  component, the rAF loop, and all effects.
+- `OverlayWindow` in `App.tsx` — the visible floating pill. Receives
+  state via `'overlay:state-update'` IPC relay.
+
+If you add expensive work to `BeamPill` (new rAF loops, observers, heavy
+memos), it runs twice. Gate work behind `document.visibilityState` or
+check whether you can live entirely in `OverlayWindow` instead.
+
+## Pill geometry is constant across states
+
+The pill's width and height must not change when the state changes. The
+recording/transcribing interiors use a `grid grid-cols-[22px_1fr_22px]`
+layout with explicit 22×22 button footprints. If you add a new state,
+reuse the same three-slot grid so `PILL_WIDTH` doesn't have to flex.
+
+- `recording` — cancel on the left, empty middle, stop button on the right.
+- `transcribing` — cancel on the left, empty middle, `PillSpinner` on the
+  right (same 22×22 footprint).
+- `complete` — centered checkmark burst; slots are padded with
+  `aria-hidden` spacers to keep the grid shape.
+- `error` — flex row with icon + message; width still bounded by the
+  pinned frame, and overflow is clipped with `truncate`.
+
+## State machine contract
+
+`OverlayWindow` receives one of: `idle | recording | transcribing |
+complete | error`. The pill renders for all except `idle`. Auto-dismiss
+timers:
+
+- `complete` → `COMPLETE_ACKNOWLEDGED` after 500 ms (renderer-driven, via
+  `dismissTimerRef` in `OverlayWindow`).
+- `error` → `ERROR_DISMISSED` after 8 s (state-machine-driven, via
+  `after` transition in `pipelineMachine.ts`).
+
+If you change either, update both the renderer timer and
+`COMPLETE_DISPLAY_MS` / `ERROR_DISPLAY_MS` in `src/shared/constants.ts`
+so the renderer doesn't race the machine.
+
+## Storybook is the iteration loop
+
+`BeamPill.stories.tsx` has a dark-backdrop decorator and stories for each
+state plus a cycling story that exercises state transitions. Use it — do
+not iterate on audio-reactive visuals in `pnpm app` unless you're
+verifying the final result. Rebuilding the Electron app per tweak burns
+minutes; Storybook is instant.
+
+## `prefers-reduced-motion`
+
+When the user has Reduce Motion enabled:
+
+- The beam is `active={false}` → vendored library emits no travel
+  animation, no fade-in.
+- The rAF loop does not start; silence baseline is visually static.
+- `.pill-spinner` and `.pill-check-burst` animations are disabled
+  (`@media (prefers-reduced-motion: reduce)` in `beam.css`).
+
+If you add a new motion, add a matching `prefers-reduced-motion` rule.
+The `useReducedMotion` hook in `BeamPill.tsx` listens for runtime
+toggles, not just at mount.
+
+## Before you edit this area
+
+1. Read `docs/retros/2026-04-17-overlay-pill-redesign.md`.
+2. Open `pnpm storybook` → `BeamPill` → `RecordingCycling` so you can
+   see your change live.
+3. If you're changing the pill's geometry, screenshot before/after at
+   each state.
+4. After you change anything in `BeamPill.tsx` / `beam.css`, rebuild the
+   full app (`pnpm app`) and verify the real overlay window. Storybook
+   does not reproduce the `transparent: true` BrowserWindow surface,
+   backdrop-filter against a desktop, or macOS font smoothing.

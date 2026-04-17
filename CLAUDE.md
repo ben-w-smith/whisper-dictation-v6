@@ -30,6 +30,7 @@ incident in this project's history traces back to skipping these.
 | `src/main/ipc.ts` window-routing code | "Window Architecture" section in `docs/shortcut-architecture.md` | `pnpm test:fragile` |
 | `src/main/llama.ts` | Comments around the consecutive-failure policy | `pnpm vitest run src/main/` |
 | Any page in `src/renderer/src/views/home/` | `docs/superpowers/specs/2026-04-14-settings-ui-redesign-design.md` | `pnpm storybook` |
+| `BeamPill.tsx`, `beam.css`, `Overlay.tsx`, `OverlayInterior.tsx`, `vendor/border-beam/**`, or `tokens.css` root-height rules | `docs/retros/2026-04-17-overlay-pill-redesign.md` + `.cursor/rules/overlay-pill.mdc` | `pnpm storybook` then `pnpm app` (Storybook doesn't reproduce the transparent BrowserWindow) |
 
 If you edit a fragile file without doing the pre-flight, stop and redo the change.
 
@@ -52,7 +53,21 @@ If you edit a fragile file without doing the pre-flight, stop and redo the chang
    new window, register it at creation time; if you remove one, call
    `unregisterWindow(role)` in its `closed` handler.
 
-3. **Hidden background window audio.** The main BrowserWindow is hidden and hosts
+3. **Overlay pill rendering.** The pill has three load-bearing invariants
+   that were rediscovered the hard way (see
+   `docs/retros/2026-04-17-overlay-pill-redesign.md`):
+   - `html, body, #root` must keep `height: 100%` in `tokens.css`. Without
+     it every `h-full` wrapper collapses to 0 and the pill rasterizes
+     at 0×0 while looking "see-through."
+   - `BeamPill` pins its own 260×44 via inline style. Do not rewrite to
+     `w-full h-full` — this is defense in depth for (1).
+   - The visible surface (background, backdrop-filter, border, shadow)
+     lives on `.beam-pill-frame` itself, not on a nested shell inside
+     the masked beam wrapper. Nesting it there makes
+     `backdrop-filter` composite through the mask and the pill goes
+     transparent.
+
+4. **Hidden background window audio.** The main BrowserWindow is hidden and hosts
    the XState machine + Web Audio capture. The following are NOT cleanup
    opportunities — removing any of them silently breaks recording:
    - `app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required')`
@@ -98,6 +113,17 @@ If you edit a fragile file without doing the pre-flight, stop and redo the chang
    (`scripts/.title-routing-baseline`) fails on any new `.getTitle() === '...'`
    site in `src/main/`. The one surviving call site in `e2e/helpers.ts` is
    deliberate test-only fallback code.
+9. **Do not rewrite `BeamPill` to use `w-full h-full` for its frame size.**
+   Pin `PILL_WIDTH × PILL_HEIGHT` via inline style. This is defense in
+   depth against any global CSS regression that would collapse the pill
+   to 0 and re-trigger the "see-through overlay" bug.
+10. **Do not remove `height: 100%` from `html, body, #root` in
+    `tokens.css`.** The overlay's `h-full` wrappers depend on it. See
+    `docs/retros/2026-04-17-overlay-pill-redesign.md`.
+11. **Do not modify files in `src/renderer/src/vendor/border-beam/`
+    directly.** It's a pristine copy of the upstream library — wrap
+    changes from `BeamPill.tsx` instead. Upgrade policy in
+    `vendor/border-beam/VENDORED.md`.
 
 ### Required workflow for fragile-file changes
 
