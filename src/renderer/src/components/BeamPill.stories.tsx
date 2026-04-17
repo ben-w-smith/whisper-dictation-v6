@@ -86,7 +86,7 @@ function Interior({ state }: { state: string }) {
 export const Recording: Story = {
   args: {
     state: 'recording',
-    audioLevel: 0.4,
+    getAudioLevel: () => 0.4,
     children: <Interior state="recording" />,
   },
 }
@@ -94,7 +94,7 @@ export const Recording: Story = {
 export const RecordingLoud: Story = {
   args: {
     state: 'recording',
-    audioLevel: 0.9,
+    getAudioLevel: () => 0.9,
     children: <Interior state="recording" />,
   },
 }
@@ -102,7 +102,7 @@ export const RecordingLoud: Story = {
 export const RecordingSilent: Story = {
   args: {
     state: 'recording',
-    audioLevel: 0.05,
+    getAudioLevel: () => 0.05,
     children: <Interior state="recording" />,
   },
 }
@@ -110,7 +110,7 @@ export const RecordingSilent: Story = {
 export const Transcribing: Story = {
   args: {
     state: 'transcribing',
-    audioLevel: 0,
+    getAudioLevel: () => 0,
     children: <Interior state="transcribing" />,
   },
 }
@@ -118,7 +118,7 @@ export const Transcribing: Story = {
 export const Complete: Story = {
   args: {
     state: 'complete',
-    audioLevel: 0,
+    getAudioLevel: () => 0,
     children: <Interior state="complete" />,
   },
 }
@@ -126,7 +126,7 @@ export const Complete: Story = {
 export const Error: Story = {
   args: {
     state: 'error',
-    audioLevel: 0,
+    getAudioLevel: () => 0,
     children: <Interior state="error" />,
   },
 }
@@ -134,7 +134,7 @@ export const Error: Story = {
 export const RecordingReducedMotion: Story = {
   args: {
     state: 'recording',
-    audioLevel: 0.4,
+    getAudioLevel: () => 0.4,
     children: <Interior state="recording" />,
   },
   decorators: [

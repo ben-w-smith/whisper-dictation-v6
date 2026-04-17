@@ -3,18 +3,14 @@ import './beam.css'
 
 interface BeamPillProps {
   state: 'recording' | 'transcribing' | 'complete' | 'error'
-  audioLevel: number // 0–1, smoothed RMS
+  getAudioLevel: () => number  // called each rAF tick
   children: React.ReactNode
 }
 
-export function BeamPill({ state, audioLevel, children }: BeamPillProps): React.ReactElement {
+export function BeamPill({ state, getAudioLevel, children }: BeamPillProps): React.ReactElement {
   const pillRef = useRef<HTMLDivElement | null>(null)
   const rafRef = useRef<number>(0)
   const levelRef = useRef(0)          // smoothed
-  const targetLevelRef = useRef(0)    // latest from props
-
-  // When audioLevel prop changes, update target
-  useEffect(() => { targetLevelRef.current = audioLevel }, [audioLevel])
 
   useEffect(() => {
     const el = pillRef.current
@@ -28,14 +24,13 @@ export function BeamPill({ state, audioLevel, children }: BeamPillProps): React.
     }
     const tick = () => {
       // IIR smoothing: level = level + 0.18 * (target - level)
-      levelRef.current += 0.18 * (targetLevelRef.current - levelRef.current)
+      levelRef.current += 0.18 * (getAudioLevel() - levelRef.current)
       const lvl = levelRef.current
 
       // Map level → opacity (0.35 floor so beam is always visible) and glow (4–14px)
       const opacity = 0.35 + Math.min(lvl, 1) * 0.65
       const glow = 4 + Math.min(lvl, 1) * 10
 
-      const el = pillRef.current
       if (el) {
         el.style.setProperty('--beam-opacity', opacity.toFixed(3))
         el.style.setProperty('--beam-glow', `${glow.toFixed(1)}px`)
@@ -44,7 +39,7 @@ export function BeamPill({ state, audioLevel, children }: BeamPillProps): React.
     }
     rafRef.current = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(rafRef.current)
-  }, [state])
+  }, [state, getAudioLevel])
 
   return (
     <div
