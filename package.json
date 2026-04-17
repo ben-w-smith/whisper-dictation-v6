@@ -16,7 +16,7 @@
     "test:watch": "vitest",
     "test:fragile": "vitest run src/main/hotkeys.test.ts src/main/shortcut-integration.test.ts src/renderer/src/state/pipelineMachine.test.ts",
     "test:e2e": "playwright test",
-    "lint": "tsc --noEmit",
+    "lint": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "lint:hex": "bash scripts/check-hex-colors.sh",
     "lint:all": "pnpm lint && pnpm lint:hex",
     "pack": "electron-builder --dir",
