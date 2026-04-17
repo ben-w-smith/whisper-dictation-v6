@@ -17,7 +17,15 @@ export function BeamPill({ state, audioLevel, children }: BeamPillProps): React.
   useEffect(() => { targetLevelRef.current = audioLevel }, [audioLevel])
 
   useEffect(() => {
-    if (state !== 'recording') return  // only react during recording
+    const el = pillRef.current
+    if (state !== 'recording') {
+      // Clear inline custom properties so CSS-defined values take over
+      if (el) {
+        el.style.removeProperty('--beam-opacity')
+        el.style.removeProperty('--beam-glow')
+      }
+      return
+    }
     const tick = () => {
       // IIR smoothing: level = level + 0.18 * (target - level)
       levelRef.current += 0.18 * (targetLevelRef.current - levelRef.current)
