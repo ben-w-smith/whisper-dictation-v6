@@ -481,32 +481,35 @@ function DictationApp(): React.ReactElement {
           return
         }
 
-        // Encode the resampled 16kHz audio as WAV
-        const wavBuffer = float32ToWav(result.samples, result.sampleRate)
-        const base64 = arrayBufferToBase64(wavBuffer)
+        // Send raw PCM via structured clone — no base64 encoding
+        const pcmBytesKB = (result.samples.byteLength / 1024).toFixed(0)
+        const estimatedWavKB = ((result.samples.byteLength + 44) / 1024).toFixed(0)
 
         debugBus.current.push('audio', 'capture_stop', {
           samples: result.samples.length,
           sampleRate: result.sampleRate,
           durationSec: (result.samples.length / result.sampleRate).toFixed(1),
-          wavSizeKB: (wavBuffer.byteLength / 1024).toFixed(0),
-          base64KB: (base64.length / 1024).toFixed(0),
+          pcmSizeKB: pcmBytesKB,
+          estimatedWavKB,
           peakLevel: result.peakLevel.toFixed(4),
           bufferCount: result.bufferCount,
         })
 
-        console.log(`[DictationApp] WAV: ${result.samples.length} samples at ${result.sampleRate}Hz = ${(result.samples.length / result.sampleRate).toFixed(1)}s, ${(wavBuffer.byteLength / 1024).toFixed(0)}KB, peak: ${result.peakLevel.toFixed(4)}`)
+        console.log(`[DictationApp] PCM: ${result.samples.length} samples at ${result.sampleRate}Hz = ${(result.samples.length / result.sampleRate).toFixed(1)}s, ${pcmBytesKB}KB, peak: ${result.peakLevel.toFixed(4)}`)
 
-        debugBus.current.push('ipc', 'send', { channel: IPC.START_WHISPER, model: settings.localModel, wavSizeKB: (wavBuffer.byteLength / 1024).toFixed(0) })
+        debugBus.current.push('ipc', 'send', { channel: IPC.START_WHISPER, model: settings.localModel, pcmSizeKB })
 
         // Phase 0 benchmark: emit IPC send timing with payload sizes
         debugBus.current.push('audio', 'timing', {
           event: 'ipc_sent',
-          wavKB: (wavBuffer.byteLength / 1024).toFixed(0),
-          base64KB: (base64.length / 1024).toFixed(0),
+          pcmKB: pcmBytesKB,
         })
 
-        window.api.invoke(IPC.START_WHISPER, base64, settings.localModel).catch((error: unknown) => {
+        window.api.invoke(IPC.START_WHISPER, {
+          samples: result.samples.buffer,
+          sampleRate: result.sampleRate,
+          model: settings.localModel,
+        }).catch((error: unknown) => {
           send({ type: 'TRANSCRIPTION_FAILURE', error: error as AppError })
         })
       }).catch((error: unknown) => {
@@ -671,56 +674,6 @@ function playSystemSound(name: string): void {
   } catch {
     // Silently fail — non-critical UI feedback
   }
-}
-
-function float32ToWav(samples: Float32Array, sampleRate: number): ArrayBuffer {
-  const numChannels = 1
-  const bitsPerSample = 16
-  const byteRate = sampleRate * numChannels * bitsPerSample / 8
-  const blockAlign = numChannels * bitsPerSample / 8
-  const dataSize = samples.length * blockAlign
-  const buffer = new ArrayBuffer(44 + dataSize)
-  const view = new DataView(buffer)
-
-  writeString(view, 0, 'RIFF')
-  view.setUint32(4, 36 + dataSize, true)
-  writeString(view, 8, 'WAVE')
-  writeString(view, 12, 'fmt ')
-  view.setUint32(16, 16, true)
-  view.setUint16(20, 1, true)
-  view.setUint16(22, numChannels, true)
-  view.setUint32(24, sampleRate, true)
-  view.setUint32(28, byteRate, true)
-  view.setUint16(32, blockAlign, true)
-  view.setUint16(34, bitsPerSample, true)
-  writeString(view, 36, 'data')
-  view.setUint32(40, dataSize, true)
-
-  let offset = 44
-  for (let i = 0; i < samples.length; i++) {
-    const s = Math.max(-1, Math.min(1, samples[i]))
-    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true)
-    offset += 2
-  }
-
-  return buffer
-}
-
-function writeString(view: DataView, offset: number, str: string): void {
-  for (let i = 0; i < str.length; i++) {
-    view.setUint8(offset + i, str.charCodeAt(i))
-  }
-}
-
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer)
-  const chunks: string[] = []
-  const chunkSize = 0x8000 // 32KB chunks to avoid call stack limits
-  for (let i = 0; i < bytes.length; i += chunkSize) {
-    const chunk = bytes.subarray(i, Math.min(i + chunkSize, bytes.length))
-    chunks.push(String.fromCharCode.apply(null, Array.from(chunk)))
-  }
-  return btoa(chunks.join(''))
 }
 
 export default App

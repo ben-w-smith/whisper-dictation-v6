@@ -6,6 +6,7 @@ import { tmpdir } from 'os'
 import { randomUUID } from 'crypto'
 import https from 'node:https'
 import { IPC } from '@shared/ipc'
+import { float32ToWav } from './wav'
 import { transcribeAudio, isModelDownloaded, getDownloadedModels, setMockTranscriptionResult } from './whisper'
 import { refineText } from './refine'
 import { writeToClipboard, autoPaste } from './clipboard'
@@ -215,13 +216,14 @@ export function registerIpcHandlers(): void {
     broadcast(IPC.SETTINGS_UPDATED, { key, value })
   })
 
-  // Start transcription — receives base64-encoded WAV from renderer
-  ipcMain.handle(IPC.START_WHISPER, async (_event, base64Wav: string, model: LocalModel): Promise<string> => {
+  // Start transcription — receives raw Float32 PCM from renderer via structured clone
+  ipcMain.handle(IPC.START_WHISPER, async (_event, payload: { samples: ArrayBuffer; sampleRate: number; model: LocalModel }): Promise<string> => {
     // Get current settings for provider and API key
     const settings = await getSettings()
 
-    // Decode base64 to buffer and write to temp file
-    const wavBuffer = Buffer.from(base64Wav, 'base64')
+    // Encode PCM to WAV in the main process (no base64 round-trip)
+    const float32 = new Float32Array(payload.samples)
+    const wavBuffer = Buffer.from(float32ToWav(float32, payload.sampleRate))
     const tempDir = join(tmpdir(), 'whisper-dictation')
     await mkdir(tempDir, { recursive: true })
     const audioPath = join(tempDir, `${randomUUID()}.wav`)
