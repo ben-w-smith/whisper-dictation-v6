@@ -17,7 +17,7 @@ export interface AudioCaptureResult {
 export class AudioCapture {
   private audioContext: AudioContext | null = null
   private mediaStream: MediaStream | null = null
-  private processorNode: ScriptProcessorNode | null = null
+  private processorNode: AudioWorkletNode | null = null
   private audioBuffers: Float32Array[] = []
   private startTime: number = 0
   private isRecording: boolean = false
@@ -69,7 +69,7 @@ export class AudioCapture {
         if (this.currentLevels.length > this.levelBufferSize) {
           this.currentLevels.shift()
         }
-      }, 256) // ~same cadence as real ScriptProcessorNode at 16kHz
+      }, 256) // ~same cadence as real AudioWorklet at 16kHz
 
       console.log('[Audio] Mock mode: generating silence buffers')
       return
@@ -137,7 +137,8 @@ export class AudioCapture {
     // Create audio context at the hardware's native rate (44100 or 48000 Hz on macOS).
     // Do NOT force 16kHz here — Chromium's internal resampler conflicts with
     // ScriptProcessorNode, causing onaudioprocess to fire with silent data.
-    // The manual resampleAudio() call below handles the 16kHz conversion for whisper.
+    // With AudioWorkletNode the conflict may be resolved (Phase 4 audit).
+    // The manual resampleAudio() call in stop() handles the 16kHz conversion for whisper.
     this.audioContext = new AudioContext()
 
     this.actualSampleRate = this.audioContext.sampleRate
@@ -160,12 +161,17 @@ export class AudioCapture {
     // Get the audio track
     const source = this.audioContext.createMediaStreamSource(this.mediaStream)
 
-    // Create script processor node (simpler than AudioWorklet for inline usage)
-    // Using 4096 buffer size for good balance between latency and performance
-    this.processorNode = this.audioContext.createScriptProcessor(4096, AUDIO_CHANNELS, AUDIO_CHANNELS)
+    // Load and create AudioWorkletNode — replaces deprecated ScriptProcessorNode.
+    // The worklet computes RMS on the audio render thread and posts frames + levels
+    // to the main thread via its MessagePort.
+    const workletUrl = new URL('audio/worklets/capture-processor.js', window.location.href).href
+    await this.audioContext.audioWorklet.addModule(workletUrl)
 
-    this.processorNode.onaudioprocess = (event) => {
-      const inputData = event.inputBuffer.getChannelData(0)
+    const node = new AudioWorkletNode(this.audioContext, 'capture-processor')
+    this.processorNode = node
+
+    node.port.onmessage = (event) => {
+      const { samples, level } = event.data as { samples: Float32Array; level: number; frameCount: number }
 
       // Phase 0 benchmark: emit first-sample timing
       if (!this.firstBufferReceived) {
@@ -176,36 +182,24 @@ export class AudioCapture {
         })
       }
 
-      // Store the audio data
-      this.audioBuffers.push(new Float32Array(inputData))
+      // Store the audio data (already a copy from the worklet via postMessage)
+      this.audioBuffers.push(samples)
 
-      // Calculate RMS level for visualization with exponential smoothing
-      const rms = this.calculateRMS(inputData)
-      const smoothed = this.smoothedLevels.length > 0
-        ? this.smoothingFactor * rms + (1 - this.smoothingFactor) * this.smoothedLevels[this.smoothedLevels.length - 1]
-        : rms
-      this.smoothedLevels.push(smoothed)
-      this.currentLevels.push(smoothed)
-
-      // Keep only recent levels
+      // Level smoothing is done in the worklet — use the smoothed value directly
+      this.currentLevels.push(level)
       if (this.currentLevels.length > this.levelBufferSize) {
         this.currentLevels.shift()
       }
     }
 
-    // Connect the graph — route through a zero-gain node to prevent
-    // mic audio from playing through speakers, while keeping the
-    // ScriptProcessorNode active (it won't fire without a destination connection)
-    const silentGain = this.audioContext.createGain()
-    silentGain.gain.value = 0
-    source.connect(this.processorNode)
-    this.processorNode.connect(silentGain)
-    silentGain.connect(this.audioContext.destination)
+    // Connect the graph — AudioWorkletNode fires without a destination connection,
+    // so no zero-gain sink is needed (unlike ScriptProcessorNode).
+    source.connect(node)
 
     this.startTime = Date.now()
     this.isRecording = true
 
-    console.log('[Audio] Recording started. AudioContext running at', this.actualSampleRate, 'Hz')
+    console.log('[Audio] Recording started. AudioWorklet + AudioContext running at', this.actualSampleRate, 'Hz')
   }
 
   /**
@@ -232,6 +226,7 @@ export class AudioCapture {
     // Stop the audio processing
     if (this.processorNode) {
       this.processorNode.disconnect()
+      this.processorNode.port.onmessage = null
       this.processorNode = null
     }
 
@@ -352,6 +347,7 @@ export class AudioCapture {
   private cleanup(): void {
     if (this.processorNode) {
       this.processorNode.disconnect()
+      this.processorNode.port.onmessage = null
       this.processorNode = null
     }
     if (this.audioContext) {
@@ -383,7 +379,7 @@ export class AudioCapture {
 
   /**
    * Calculate RMS (root mean square) of audio samples
-   * Used for audio level visualization
+   * Used for audio level visualization in mock mode
    */
   private calculateRMS(samples: Float32Array): number {
     let sum = 0
