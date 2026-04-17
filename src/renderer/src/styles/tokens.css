@@ -19,45 +19,53 @@
 }
 
 @theme {
-  /* Design tokens as CSS custom properties */
+  /* Design tokens — warm defaults registered with Tailwind.
+     Theme selectors below override these values per active theme. */
 
   /* Font families */
   --font-sans: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
 
-  /* Surfaces */
+  /* Accent palette swatches (raw values — resolved by [data-accent] selectors) */
+  --accent-teal:    #0d9488;
+  --accent-teal-h:  #0f766e;
+  --accent-amber:   #d97706;
+  --accent-amber-h: #b45309;
+  --accent-violet:  #7c3aed;
+  --accent-violet-h: #6d28d9;
+  --accent-rose:    #e11d48;
+  --accent-rose-h:  #be123c;
+  --accent-mono:    #1c1917;
+  --accent-mono-h:  #000000;
+
+  /* Surfaces (warm defaults) */
   --color-canvas: #f0ece8;
   --color-surface: #faf8f6;
   --color-surface-hover: #ebe6df;
   --color-surface-active: #e5e0d8;
   --color-overlay: rgba(15, 15, 18, 0.85);
 
-  /* Text */
+  /* Text (warm defaults) */
   --color-text-primary: #1c1917;
   --color-text-secondary: #6b6560;
   --color-text-muted: #9c9590;
 
-  /* Accent */
+  /* Accent (teal default — overridden by data-accent) */
   --color-accent: #0d9488;
   --color-accent-hover: #0f766e;
-  --color-accent-subtle: #e6f2ef;
 
   /* Borders & dividers */
   --color-border-custom: #e0dbd5;
   --color-border-hover: #d1cbc3;
+  --color-border-subtle: #c4bdb4;
 
   /* Component-specific */
   --color-toggle-off: #d6d1ca;
-  --color-recorder-border: #c4bdb4;
 
   /* Semantic state colors */
   --color-success: #16a34a;
-  --color-success-subtle: #f0fdf4;
   --color-warning: #d97706;
-  --color-warning-subtle: #fffbeb;
   --color-danger: #dc2626;
-  --color-danger-subtle: #fef2f2;
   --color-info: #0d9488;
-  --color-info-subtle: #e6f2ef;
 
   /* Pipeline state colors (legacy names kept for overlay compatibility) */
   --color-recording: #ef4444;
@@ -84,16 +92,155 @@
   --space-3xl: 48px;
 
   /* Semantic spacing */
-  --spacing-section: 24px;    /* gap between top-level sections */
-  --spacing-row: 12px;        /* vertical padding for settings rows */
-  --spacing-card: 16px;       /* internal card padding */
-  --spacing-page: 20px;       /* page content area padding */
+  --spacing-section: 24px;
+  --spacing-row: 12px;
+  --spacing-card: 16px;
+  --spacing-page: 20px;
 
-  /* Border radius */
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 10px;
-  --radius-xl: 12px;
+  /* Border radius (multiplied by --radius-scale) */
+  --radius-sm: calc(6px * var(--radius-scale, 1));
+  --radius-md: calc(8px * var(--radius-scale, 1));
+  --radius-lg: calc(10px * var(--radius-scale, 1));
+  --radius-xl: calc(12px * var(--radius-scale, 1));
+  --radius-pill: 9999px;
+}
+
+/* ── Defaults (applied before theme attribute loads) ── */
+html {
+  --radius-scale: 1;
+  transition: background-color 220ms ease, color 220ms ease;
+}
+
+/* ── Accent resolution ── */
+html[data-accent="teal"]   { --color-accent: var(--accent-teal);   --color-accent-hover: var(--accent-teal-h); }
+html[data-accent="amber"]  { --color-accent: var(--accent-amber);  --color-accent-hover: var(--accent-amber-h); }
+html[data-accent="violet"] { --color-accent: var(--accent-violet); --color-accent-hover: var(--accent-violet-h); }
+html[data-accent="rose"]   { --color-accent: var(--accent-rose);   --color-accent-hover: var(--accent-rose-h); }
+html[data-accent="mono"]   { --color-accent: var(--accent-mono);   --color-accent-hover: var(--accent-mono-h); }
+
+/* Accent-subtle derivation — 10% color-mix over canvas */
+html { --color-accent-subtle: color-mix(in oklch, var(--color-accent) 10%, var(--color-canvas)); }
+html[data-accent="mono"] { --color-accent-subtle: var(--color-surface-hover); }
+
+/* Semantic subtle derivations — theme-aware via color-mix */
+html {
+  --color-success-subtle: color-mix(in oklch, var(--color-success) 10%, var(--color-canvas));
+  --color-warning-subtle: color-mix(in oklch, var(--color-warning) 10%, var(--color-canvas));
+  --color-danger-subtle:  color-mix(in oklch, var(--color-danger)  10%, var(--color-canvas));
+  --color-info-subtle:    color-mix(in oklch, var(--color-info)    10%, var(--color-canvas));
+}
+
+/* ─── LIGHT (cool neutral, Vercel-adjacent) ─── */
+html[data-theme="light"] {
+  --color-canvas:          #fafafa;
+  --color-surface:         #ffffff;
+  --color-surface-hover:   #f4f4f5;
+  --color-surface-active:  #e4e4e7;
+  --color-overlay:         rgba(15, 15, 18, 0.85);
+
+  --color-text-primary:    #09090b;
+  --color-text-secondary:  #52525b;
+  --color-text-muted:      #a1a1aa;
+
+  --color-border-custom:   #e4e4e7;
+  --color-border-hover:    #d4d4d8;
+  --color-border-subtle:   #c4c4c7;
+
+  --color-toggle-off:      #d4d4d8;
+}
+
+/* ─── WARM (current — default) ─── */
+html[data-theme="warm"] {
+  --color-canvas:          #f0ece8;
+  --color-surface:         #faf8f6;
+  --color-surface-hover:   #ebe6df;
+  --color-surface-active:  #e5e0d8;
+  --color-overlay:         rgba(15, 15, 18, 0.85);
+
+  --color-text-primary:    #1c1917;
+  --color-text-secondary:  #6b6560;
+  --color-text-muted:      #9c9590;
+
+  --color-border-custom:   #e0dbd5;
+  --color-border-hover:    #d1cbc3;
+  --color-border-subtle:   #c4bdb4;
+
+  --color-toggle-off:      #d6d1ca;
+}
+
+/* ─── DARK (warm dark) ─── */
+html[data-theme="dark"] {
+  --color-canvas:          #1a1918;
+  --color-surface:         #242321;
+  --color-surface-hover:   #2e2d2a;
+  --color-surface-active:  #383734;
+  --color-overlay:         rgba(0, 0, 0, 0.88);
+
+  --color-text-primary:    #f5f2ef;
+  --color-text-secondary:  #a8a29e;
+  --color-text-muted:      #78716c;
+
+  --color-border-custom:   #2e2d2a;
+  --color-border-hover:    #3a3836;
+  --color-border-subtle:   #4a4846;
+
+  --color-toggle-off:      #3a3836;
+}
+
+/* ─── BLACK (true OLED) ─── */
+html[data-theme="black"] {
+  --color-canvas:          #000000;
+  --color-surface:         #0a0a0a;
+  --color-surface-hover:   #141414;
+  --color-surface-active:  #1f1f1f;
+  --color-overlay:         rgba(0, 0, 0, 0.92);
+
+  --color-text-primary:    #fafafa;
+  --color-text-secondary:  #9ca3af;
+  --color-text-muted:      #6b7280;
+
+  --color-border-custom:   #1f1f1f;
+  --color-border-hover:    #2a2a2a;
+  --color-border-subtle:   #3a3a3a;
+
+  --color-toggle-off:      #2a2a2a;
+}
+
+/* ── Ambient background layer ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  transition: opacity 250ms ease;
+}
+
+html[data-ambient="none"] body::before { opacity: 0; }
+
+html[data-ambient="grain"] body::before {
+  opacity: 0.06;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+
+html[data-ambient="dots"] body::before {
+  opacity: 0.06;
+  background-image: radial-gradient(circle, var(--color-text-primary) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+
+html[data-ambient="sunset"] body::before {
+  opacity: 0.35;
+  background:
+    radial-gradient(ellipse at top left,  #fda4af22 0%, transparent 60%),
+    radial-gradient(ellipse at bottom right, #fbbf2422 0%, transparent 60%);
+}
+
+html[data-ambient="ocean"] body::before {
+  opacity: 0.35;
+  background:
+    radial-gradient(ellipse at top right,    #60a5fa22 0%, transparent 60%),
+    radial-gradient(ellipse at bottom left,  #5eead422 0%, transparent 60%);
 }
 
 /* Tailwind utility extensions */
@@ -137,8 +284,8 @@
   background-color: var(--color-toggle-off);
 }
 
-@utility border-recorder-border {
-  border-color: var(--color-recorder-border);
+@utility border-border-subtle {
+  border-color: var(--color-border-subtle);
 }
 
 @utility border-border-custom {

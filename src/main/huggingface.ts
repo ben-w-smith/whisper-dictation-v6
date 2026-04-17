@@ -58,7 +58,7 @@ function httpsGetWithAuth(
   url: string,
   token: string | undefined,
   callback: (res: import('node:http').IncomingMessage) => void
-): import('node:https').Request {
+): import('node:http').ClientRequest {
   const headers: Record<string, string> = {}
   if (token) {
     headers['Authorization'] = `Bearer ${token}`

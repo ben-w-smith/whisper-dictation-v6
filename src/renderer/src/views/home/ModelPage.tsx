@@ -35,11 +35,15 @@ export function ModelPage(): React.ReactElement {
     loadSettings()
     loadDownloaded()
 
-    const unsubscribe = window.api.on(IPC.DOWNLOAD_PROGRESS, (progress: { model: LocalModel; percent: number }) => {
+    // window.api.on is typed as (...args: unknown[]) — cast the first arg
+    // to the payload shape the main process actually broadcasts.
+    const unsubscribe = window.api.on(IPC.DOWNLOAD_PROGRESS, (...args) => {
+      const progress = args[0] as { model: LocalModel; percent: number }
       setDownloadProgress((prev) => ({ ...prev, [progress.model]: progress.percent }))
     })
 
-    const unsubscribeComplete = window.api.on(IPC.DOWNLOAD_COMPLETE, (model: LocalModel) => {
+    const unsubscribeComplete = window.api.on(IPC.DOWNLOAD_COMPLETE, (...args) => {
+      const model = args[0] as LocalModel
       setDownloading(null)
       setDownloadProgress((prev) => ({ ...prev, [model]: 100 }))
       setDownloadedModels((prev) => new Set([...prev, model]))

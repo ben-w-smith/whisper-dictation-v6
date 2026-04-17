@@ -61,3 +61,8 @@ storybook-static/
 
 # Screenshots
 screenshots/
+
+
+#Ignore cursor AI rules
+.cursor/rules/codacy.mdc
+.cursor/worktrees/

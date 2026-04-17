@@ -69,7 +69,7 @@ export class AudioCapture {
         if (this.currentLevels.length > this.levelBufferSize) {
           this.currentLevels.shift()
         }
-      }, 256) // ~same cadence as real AudioWorklet at 16kHz
+      }, 256) // coarse mock cadence; exposes the capture interface but does not simulate worklet timing
 
       console.log('[Audio] Mock mode: generating silence buffers')
       return

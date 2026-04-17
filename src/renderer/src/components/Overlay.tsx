@@ -1,12 +1,15 @@
 import React, { useEffect, useCallback, useRef } from 'react'
-import type { ActorStateFrom } from 'xstate'
+import type { EventFromLogic, SnapshotFrom } from 'xstate'
 import type { PipelineMachine } from '@renderer/state'
 import { BeamPill } from './BeamPill'
 import { OverlayInterior } from './OverlayInterior'
 
 interface OverlayProps {
-  state: ActorStateFrom<PipelineMachine>
-  send: (event: { type: string; [key: string]: unknown }) => void
+  // xstate 5 exports `SnapshotFrom` / `EventFromLogic`; the pre-5 `ActorStateFrom`
+  // alias no longer exists. Using the machine's real event union also keeps
+  // `send` contravariant-compatible with the actor's own `send`.
+  state: SnapshotFrom<PipelineMachine>
+  send: (event: EventFromLogic<PipelineMachine>) => void
   elapsedMs?: number
 }
 

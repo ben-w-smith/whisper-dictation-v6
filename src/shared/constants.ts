@@ -16,6 +16,11 @@ export const DEFAULT_SETTINGS: AppSettings = {
   playSounds: true,
   onboardingComplete: false,
   dictionary: [],
+  theme: 'warm',
+  accent: 'teal',
+  radiusScale: 1.0,
+  ambient: 'none',
+  followSystemTheme: false,
 }
 
 // Audio
@@ -40,28 +45,6 @@ export const GGUF_META_FILE = 'gguf-meta.json'
 // UI timing
 export const COMPLETE_DISPLAY_MS = 500
 export const ERROR_DISPLAY_MS = 8000
-
-// Design tokens
-export const DESIGN_TOKENS = {
-  color: {
-    bgCanvas: '#fafaf9',
-    bgSurface: '#ffffff',
-    bgOverlay: 'rgba(15, 15, 18, 0.85)',
-    textPrimary: '#1c1917',
-    textSecondary: '#78716c',
-    textMuted: '#a8a29e',
-    accent: '#0d9488',
-    accentHover: '#0f766e',
-    accentSubtle: '#f0fdfa',
-    border: '#e7e5e4',
-    recording: '#ef4444',
-    transcribing: '#3b82f6',
-    complete: '#22c55e',
-    error: '#f97316',
-  },
-  radius: '12px',
-  spacing: '24px',
-} as const
 
 // Storage paths
 export const APP_NAME = 'WhisperDictation'

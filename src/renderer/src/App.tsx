@@ -11,6 +11,7 @@ import { IPC } from '@shared/ipc'
 import { getDebugBus } from '@shared/debug'
 import type { AppSettings, AppError } from '@shared/types'
 import { DEFAULT_SETTINGS } from '@shared/constants'
+import { useAppearance } from './hooks/useAppearance'
 
 function useHash(): string {
   const [hash, setHash] = useState(window.location.hash)
@@ -22,9 +23,35 @@ function useHash(): string {
   return hash
 }
 
+/**
+ * Loads appearance settings and applies them via useAppearance.
+ * No-ops when `enabled` is false (i.e. the overlay window) to avoid
+ * unnecessary IPC traffic — the overlay is theme-independent per plan §3.5.
+ */
+function useAppearanceBridge(enabled: boolean) {
+  const [appearanceSettings, setAppearanceSettings] = useState<AppSettings | null>(null)
+  useEffect(() => {
+    if (!enabled) return
+    window.api.invoke(IPC.GET_SETTINGS).then((s) => {
+      if (s) setAppearanceSettings(s as AppSettings)
+    }).catch(() => {})
+    const unsub = window.api.on(IPC.SETTINGS_UPDATED, () => {
+      window.api.invoke(IPC.GET_SETTINGS).then((s) => {
+        if (s) setAppearanceSettings(s as AppSettings)
+      }).catch(() => {})
+    })
+    return unsub
+  }, [enabled])
+  useAppearance(enabled ? appearanceSettings : null)
+}
+
 function App(): React.ReactElement {
   const hash = useHash()
   const route = hash.replace(/^#\/?/, '') // "#settings" → "settings", "#/" → ""
+  const isOverlay = route === 'overlay'
+
+  // Overlay is theme-independent — skip all appearance IPC
+  useAppearanceBridge(!isOverlay)
 
   // Standalone pages (opened in their own windows)
   if (route === 'home' || route === 'settings') {
@@ -165,7 +192,7 @@ function OverlayWindow(): React.ReactElement {
 
 const pipelineMachine = createPipelineMachine()
 
-function DictationApp(): React.ReactElement {
+function DictationApp(): React.ReactElement | null {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS)
   const [settingsLoaded, setSettingsLoaded] = useState(false)
   const [refinementSkipped, setRefinementSkipped] = useState(false)
@@ -193,7 +220,7 @@ function DictationApp(): React.ReactElement {
 
   // Subscribe to state machine transitions and log to DebugBus
   useEffect(() => {
-    const unsub = actorRef.subscribe((snapshot) => {
+    const subscription = actorRef.subscribe((snapshot) => {
       debugBus.current.push('pipeline', 'state_change', {
         state: snapshot.value,
         context: {
@@ -204,7 +231,9 @@ function DictationApp(): React.ReactElement {
         },
       })
     })
-    return unsub
+    // xstate .subscribe returns a Subscription object; React expects a void
+    // cleanup function.
+    return () => subscription.unsubscribe()
   }, [actorRef])
 
   // Load settings and listen for IPC events
@@ -441,7 +470,7 @@ function DictationApp(): React.ReactElement {
 
         console.log(`[DictationApp] PCM: ${result.samples.length} samples at ${result.sampleRate}Hz = ${(result.samples.length / result.sampleRate).toFixed(1)}s, ${pcmBytesKB}KB, peak: ${result.peakLevel.toFixed(4)}`)
 
-        debugBus.current.push('ipc', 'send', { channel: IPC.START_WHISPER, model: settings.localModel, pcmSizeKB })
+        debugBus.current.push('ipc', 'send', { channel: IPC.START_WHISPER, model: settings.localModel, pcmSizeKB: pcmBytesKB })
 
         // Phase 0 benchmark: emit IPC send timing with payload sizes
         debugBus.current.push('audio', 'timing', {

@@ -1,6 +1,9 @@
 export type LocalModel = 'tiny.en' | 'base.en' | 'small.en' | 'medium.en' | 'large-v3'
 export type RefinementIntensity = 'light' | 'medium' | 'heavy'
 export type LlamaServerStatus = 'stopped' | 'starting' | 'ready' | 'error' | 'crashed'
+export type ThemeName = 'light' | 'warm' | 'dark' | 'black'
+export type AccentName = 'teal' | 'amber' | 'violet' | 'rose' | 'mono'
+export type AmbientName = 'none' | 'grain' | 'dots' | 'sunset' | 'ocean'
 
 // Custom dictionary entry for word replacements
 export interface DictionaryEntry {
@@ -40,6 +43,13 @@ export interface AppSettings {
 
   // Custom dictionary
   dictionary: DictionaryEntry[]
+
+  // Appearance
+  theme: ThemeName
+  accent: AccentName
+  radiusScale: number
+  ambient: AmbientName
+  followSystemTheme: boolean
 }
 
 // Transcription history entry
@@ -120,7 +130,7 @@ export interface WhisperResult {
 }
 
 // Home window page
-export type HomePage = 'general' | 'model' | 'ai' | 'dictionary' | 'history' | 'about'
+export type HomePage = 'general' | 'appearance' | 'model' | 'ai' | 'dictionary' | 'history' | 'about'
 
 // Overlay display state
 export interface OverlayState {
