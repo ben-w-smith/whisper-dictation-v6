@@ -10,13 +10,13 @@ interface AppearanceSettings {
 }
 
 export function useAppearance(settings: AppearanceSettings) {
+  const [systemThemeVersion, setSystemThemeVersion] = useState(0)
+
   const effectiveTheme = useMemo<ThemeName>(() => {
     if (!settings.followSystemTheme) return settings.theme
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
     return prefersDark ? 'dark' : 'light'
-  }, [settings.theme, settings.followSystemTheme])
-
-  const [systemThemeVersion, setSystemThemeVersion] = useState(0)
+  }, [settings.theme, settings.followSystemTheme, systemThemeVersion])
 
   useEffect(() => {
     const html = document.documentElement
