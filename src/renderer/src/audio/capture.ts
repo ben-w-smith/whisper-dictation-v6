@@ -1,6 +1,7 @@
 import { AUDIO_SAMPLE_RATE, AUDIO_CHANNELS, MIN_RECORDING_DURATION_MS } from '@shared/constants'
 import { createError } from '@shared/errors'
 import { IPC } from '@shared/ipc'
+import { getDebugBus } from '@shared/debug'
 
 export interface AudioCaptureResult {
   /** PCM samples at exactly AUDIO_SAMPLE_RATE (16kHz) */
@@ -26,6 +27,9 @@ export class AudioCapture {
   private smoothingFactor: number = 0.4
   private actualSampleRate: number = AUDIO_SAMPLE_RATE
   private mockInterval: ReturnType<typeof setInterval> | null = null
+  // Phase 0 benchmark: timing probes
+  private hotkeyTimestamp: number = 0
+  private firstBufferReceived: boolean = false
 
   /**
    * Start audio capture from the microphone
@@ -36,6 +40,10 @@ export class AudioCapture {
     if (this.isRecording) {
       return
     }
+
+    // Phase 0 benchmark: record hotkey-to-capture latency
+    this.hotkeyTimestamp = Date.now()
+    this.firstBufferReceived = false
 
     // Test mock mode — generate silence buffers instead of capturing from mic
     if ((window as unknown as Record<string, unknown>).__testMockAudio) {
@@ -159,6 +167,15 @@ export class AudioCapture {
     this.processorNode.onaudioprocess = (event) => {
       const inputData = event.inputBuffer.getChannelData(0)
 
+      // Phase 0 benchmark: emit first-sample timing
+      if (!this.firstBufferReceived) {
+        this.firstBufferReceived = true
+        getDebugBus().push('audio', 'timing', {
+          event: 'first_sample',
+          deltaMs: Date.now() - this.hotkeyTimestamp,
+        })
+      }
+
       // Store the audio data
       this.audioBuffers.push(new Float32Array(inputData))
 
@@ -200,6 +217,9 @@ export class AudioCapture {
     if (!this.isRecording) {
       throw new Error('Not recording')
     }
+
+    // Phase 0 benchmark: measure stop duration (includes disconnect, resample, concat)
+    const stopStart = Date.now()
 
     // Clean up mock interval if in mock mode
     if (this.mockInterval) {
@@ -253,6 +273,14 @@ export class AudioCapture {
       : rawSamples
 
     const bufferCount = this.audioBuffers.length
+
+    // Phase 0 benchmark: emit stop timing (includes resample)
+    getDebugBus().push('audio', 'timing', {
+      event: 'stop_complete',
+      deltaMs: Date.now() - stopStart,
+      totalSamples: samples.length,
+      bufferCount,
+    })
 
     // Clear buffers
     this.audioBuffers = []

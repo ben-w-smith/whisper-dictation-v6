@@ -238,6 +238,9 @@ function DictationApp(): React.ReactElement {
   // Fast-path ref for audio levels - bypasses state machine to reduce overlay lag
   const latestAudioLevelsRef = useRef<number[]>([])
   const overlayModeRef = useRef<string>('hidden')
+  // Phase 0 benchmark: overlay FPS counter
+  const overlayFrameCountRef = useRef<number>(0)
+  const overlayFpsIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // Expose debug bus on window for MCP tool / DevTools access
   useEffect(() => {
@@ -411,8 +414,10 @@ function DictationApp(): React.ReactElement {
 
       // Fast-path: send audio levels directly to overlay every 16ms (~60fps)
       // This bypasses the state machine's React batching for responsive waveform bars
+      overlayFrameCountRef.current = 0
       overlayAudioIntervalRef.current = setInterval(() => {
         if (overlayModeRef.current === 'overlay') {
+          overlayFrameCountRef.current++
           const levels = latestAudioLevelsRef.current
           const currentElapsed = capture.getDurationMs()
           // Send minimal update to overlay - only audio levels and elapsed time change during recording
@@ -428,6 +433,13 @@ function DictationApp(): React.ReactElement {
           })
         }
       }, 16)
+
+      // Phase 0 benchmark: report overlay FPS every 1 second
+      overlayFpsIntervalRef.current = setInterval(() => {
+        const fps = overlayFrameCountRef.current
+        overlayFrameCountRef.current = 0
+        debugBus.current.push('audio', 'timing', { event: 'overlay_fps', fps })
+      }, 1000)
     } else if (state.matches('transcribing')) {
       // Play stop sound when recording ends
       if (settings.playSounds) {
@@ -445,6 +457,10 @@ function DictationApp(): React.ReactElement {
       if (overlayAudioIntervalRef.current) {
         clearInterval(overlayAudioIntervalRef.current)
         overlayAudioIntervalRef.current = null
+      }
+      if (overlayFpsIntervalRef.current) {
+        clearInterval(overlayFpsIntervalRef.current)
+        overlayFpsIntervalRef.current = null
       }
 
       capture.stop().then((result: AudioCaptureResult) => {
@@ -474,6 +490,7 @@ function DictationApp(): React.ReactElement {
           sampleRate: result.sampleRate,
           durationSec: (result.samples.length / result.sampleRate).toFixed(1),
           wavSizeKB: (wavBuffer.byteLength / 1024).toFixed(0),
+          base64KB: (base64.length / 1024).toFixed(0),
           peakLevel: result.peakLevel.toFixed(4),
           bufferCount: result.bufferCount,
         })
@@ -481,6 +498,13 @@ function DictationApp(): React.ReactElement {
         console.log(`[DictationApp] WAV: ${result.samples.length} samples at ${result.sampleRate}Hz = ${(result.samples.length / result.sampleRate).toFixed(1)}s, ${(wavBuffer.byteLength / 1024).toFixed(0)}KB, peak: ${result.peakLevel.toFixed(4)}`)
 
         debugBus.current.push('ipc', 'send', { channel: IPC.START_WHISPER, model: settings.localModel, wavSizeKB: (wavBuffer.byteLength / 1024).toFixed(0) })
+
+        // Phase 0 benchmark: emit IPC send timing with payload sizes
+        debugBus.current.push('audio', 'timing', {
+          event: 'ipc_sent',
+          wavKB: (wavBuffer.byteLength / 1024).toFixed(0),
+          base64KB: (base64.length / 1024).toFixed(0),
+        })
 
         window.api.invoke(IPC.START_WHISPER, base64, settings.localModel).catch((error: unknown) => {
           send({ type: 'TRANSCRIPTION_FAILURE', error: error as AppError })
@@ -537,6 +561,10 @@ function DictationApp(): React.ReactElement {
       if (overlayAudioIntervalRef.current) {
         clearInterval(overlayAudioIntervalRef.current)
         overlayAudioIntervalRef.current = null
+      }
+      if (overlayFpsIntervalRef.current) {
+        clearInterval(overlayFpsIntervalRef.current)
+        overlayFpsIntervalRef.current = null
       }
       // Stop capture if it was left running (e.g. recording cancelled before
       // capture.start() resolved, or recordingTooShort guard fired to idle)
