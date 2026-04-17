@@ -56,28 +56,6 @@ export const WAVEFORM_GRADIENT = [
 
 export const WAVEFORM_BAR_COUNT = 16
 
-// Design tokens
-export const DESIGN_TOKENS = {
-  color: {
-    bgCanvas: '#fafaf9',
-    bgSurface: '#ffffff',
-    bgOverlay: 'rgba(15, 15, 18, 0.85)',
-    textPrimary: '#1c1917',
-    textSecondary: '#78716c',
-    textMuted: '#a8a29e',
-    accent: '#0d9488',
-    accentHover: '#0f766e',
-    accentSubtle: '#f0fdfa',
-    border: '#e7e5e4',
-    recording: '#ef4444',
-    transcribing: '#3b82f6',
-    complete: '#22c55e',
-    error: '#f97316',
-  },
-  radius: '12px',
-  spacing: '24px',
-} as const
-
 // Storage paths
 export const APP_NAME = 'WhisperDictation'
 export const CONFIG_FILE = 'config.json'

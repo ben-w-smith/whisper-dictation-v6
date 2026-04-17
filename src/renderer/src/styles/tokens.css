@@ -52,7 +52,6 @@
   /* Accent (teal default — overridden by data-accent) */
   --color-accent: #0d9488;
   --color-accent-hover: #0f766e;
-  --color-accent-subtle: #e6f2ef;
 
   /* Borders & dividers */
   --color-border-custom: #e0dbd5;
@@ -64,13 +63,9 @@
 
   /* Semantic state colors */
   --color-success: #16a34a;
-  --color-success-subtle: #f0fdf4;
   --color-warning: #d97706;
-  --color-warning-subtle: #fffbeb;
   --color-danger: #dc2626;
-  --color-danger-subtle: #fef2f2;
   --color-info: #0d9488;
-  --color-info-subtle: #e6f2ef;
 
   /* Pipeline state colors (legacy names kept for overlay compatibility) */
   --color-recording: #ef4444;
@@ -117,8 +112,8 @@ html[data-accent="violet"] { --color-accent: var(--accent-violet); --color-accen
 html[data-accent="rose"]   { --color-accent: var(--accent-rose);   --color-accent-hover: var(--accent-rose-h); }
 html[data-accent="mono"]   { --color-accent: var(--accent-mono);   --color-accent-hover: var(--accent-mono-h); }
 
-/* Accent-subtle derivation — 8% color-mix over canvas */
-html { --color-accent-subtle: color-mix(in oklch, var(--color-accent) 8%, var(--color-canvas)); }
+/* Accent-subtle derivation — 10% color-mix over canvas */
+html { --color-accent-subtle: color-mix(in oklch, var(--color-accent) 10%, var(--color-canvas)); }
 html[data-accent="mono"] { --color-accent-subtle: var(--color-surface-hover); }
 
 /* Semantic subtle derivations — theme-aware via color-mix */
