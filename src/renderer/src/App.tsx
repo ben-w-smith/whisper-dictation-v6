@@ -21,13 +21,15 @@ function useHash(): string {
   return hash
 }
 
-function App(): React.ReactElement {
-  const hash = useHash()
-  const route = hash.replace(/^#\/?/, '') // "#settings" → "settings", "#/" → ""
-
-  // Load appearance settings at top level so every window reflects the chosen theme
+/**
+ * Loads appearance settings and applies them via useAppearance.
+ * No-ops when `enabled` is false (i.e. the overlay window) to avoid
+ * unnecessary IPC traffic — the overlay is theme-independent per plan §3.5.
+ */
+function useAppearanceBridge(enabled: boolean) {
   const [appearanceSettings, setAppearanceSettings] = useState(DEFAULT_SETTINGS)
   useEffect(() => {
+    if (!enabled) return
     window.api.invoke(IPC.GET_SETTINGS).then((s) => {
       if (s) setAppearanceSettings(s as AppSettings)
     }).catch(() => {})
@@ -37,8 +39,17 @@ function App(): React.ReactElement {
       }).catch(() => {})
     })
     return unsub
-  }, [])
-  useAppearance(appearanceSettings)
+  }, [enabled])
+  useAppearance(enabled ? appearanceSettings : DEFAULT_SETTINGS)
+}
+
+function App(): React.ReactElement {
+  const hash = useHash()
+  const route = hash.replace(/^#\/?/, '') // "#settings" → "settings", "#/" → ""
+  const isOverlay = route === 'overlay'
+
+  // Overlay is theme-independent — skip all appearance IPC
+  useAppearanceBridge(!isOverlay)
 
   // Standalone pages (opened in their own windows)
   if (route === 'home' || route === 'settings') {
