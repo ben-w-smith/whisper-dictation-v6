@@ -1,0 +1,64 @@
+---
+description: Guardrails for the hotkey subsystem — a non-local system with nine documented past bug classes
+globs: ["src/main/hotkeys.ts", "src/main/hotkeys.test.ts", "src/main/shortcut-integration.test.ts", "src/renderer/src/components/ShortcutRecorder.tsx", "src/renderer/src/components/Onboarding.tsx", "src/renderer/src/views/home/GeneralPage.tsx"]
+alwaysApply: false
+---
+
+# Hotkey subsystem rules
+
+This subsystem spans 3 processes, 4 windows, and two independent event sources
+(`Electron.globalShortcut` + `iohook-macos`). It has nine documented past bug
+classes. **Before writing any code here, follow the pre-flight.**
+
+## Pre-flight (required)
+
+1. Read `docs/shortcut-architecture.md` in full. Every rule at the bottom is load-bearing.
+2. State your plan before editing: the goal, the files you expect to touch, the invariants that must still hold.
+3. Run `pnpm test:fragile` and paste the baseline result.
+4. Make the change.
+5. Re-run `pnpm test:fragile` and paste the result.
+6. Manually verify via `pnpm run app` — `pnpm dev` does NOT exercise global shortcuts correctly.
+
+## Load-bearing invariants (from docs/shortcut-architecture.md)
+
+1. Never send `MOUSE_BUTTON_CAPTURED` to a specific window — always use `event.sender`.
+2. Keyboard and mouse registration must be independent — never if/else, always register both.
+3. `SET_SETTING` for either shortcut type re-registers BOTH — because they share the callback.
+4. Never call `RESUME_HOTKEY` from the capture flow — the `SET_SETTING` handler re-registers.
+5. Never `console.log` inside an iohook listener — EPIPE crashes the app.
+6. Use `typeof mouse === 'number'` to distinguish mouse captures. `null !== undefined` is true; `!== undefined` is the wrong check.
+7. After every change, re-test the full shortcut flow, not just the piece you touched.
+
+## Forbidden in this subsystem
+
+- **Electron `globalShortcut` for anything beyond plain key accelerators.** It has no key-up, no per-button mouse, no push-to-talk. New event types go through `iohook-macos`.
+- **New module-level mutable state in `hotkeys.ts`.** `registeredShortcuts`, `registeredMouseButton`, `mouseCallback`, `mouseListener`, `isMousePaused` are already too many. Refactor to an FSM before adding another flag.
+- **Special-case `if` branches that paper over ordering or race issues.** Those are the upstream bug, not the symptom.
+- **`console.log` inside any `iohook.on(...)` listener.** Use `debugBus.push(...)` from the renderer if you need observability.
+
+## The local-fix red flag
+
+The nine historical bugs were almost all caused by local fixes that didn't
+account for the whole pipeline. If your instinct says "just add an if-statement
+here," pause and ask:
+
+- Is this a type-model problem one layer up? (bug #7 was this)
+- Is this a race between two async handlers? (bugs #4, #5 were this)
+- Is this a wrong-window dispatch? (bug #6 was this)
+- Is this the wrong event source? (bug #2 was this)
+
+Write down what the upstream fix would look like before deciding on the local
+patch. If you must take the local fix, leave a comment pointing at the upstream
+problem for the next session.
+
+## Propose-a-plan gate
+
+For any non-trivial change in this subsystem (anything beyond typo/comment
+fixes), respond with a plan first and wait for confirmation. The plan should
+name:
+
+- Files touched
+- Invariants preserved
+- Invariants possibly affected
+- Tests that cover the change
+- Manual verification steps

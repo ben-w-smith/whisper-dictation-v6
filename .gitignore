@@ -38,6 +38,9 @@ pnpm-debug.log*
 # Test artifacts
 test-results/
 playwright-report/
+
+# Chat transcripts / context dumps accidentally saved to repo root
+/cursor_*.md
 coverage/
 
 # Electron builder

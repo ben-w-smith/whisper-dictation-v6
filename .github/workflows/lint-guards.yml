@@ -1,0 +1,80 @@
+name: Lint & Guards
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  guards:
+    name: Repo guards
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ripgrep
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
+
+      - name: No new hardcoded hex colors in renderer UI
+        run: bash scripts/check-hex-colors.sh
+
+      - name: No new title-based window routing
+        shell: bash
+        run: |
+          # Existing title-based routing is tech debt. New code should use
+          # a window registry by id. This guard fails if the count grows.
+          #
+          # Baseline count is stored in scripts/.title-routing-baseline to
+          # make the guard move only in the reducing direction.
+          set -euo pipefail
+          BASELINE_FILE=scripts/.title-routing-baseline
+          current=$(rg --no-heading --count-matches \
+              "\.getTitle\(\)\s*===\s*'" \
+              src/main 2>/dev/null \
+              | awk -F: '{s+=$2} END {print s+0}')
+          if [ ! -f "$BASELINE_FILE" ]; then
+            echo "$current" > "$BASELINE_FILE"
+            echo "Seeded baseline: $current"
+            exit 0
+          fi
+          baseline=$(cat "$BASELINE_FILE")
+          echo "title-routing: current=$current baseline=$baseline"
+          if [ "$current" -gt "$baseline" ]; then
+            echo "✗ New title-based window routing introduced."
+            echo "  current=$current vs baseline=$baseline."
+            echo "  Use a window registry (registerWindow/getWindow) instead."
+            exit 1
+          fi
+          if [ "$current" -lt "$baseline" ]; then
+            echo "ℹ Title-routing count decreased. Update $BASELINE_FILE to $current."
+          fi
+
+  typecheck:
+    name: Typecheck (tsc --noEmit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm lint
+
+  fragile-tests:
+    name: Fragile subsystem tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm test:fragile

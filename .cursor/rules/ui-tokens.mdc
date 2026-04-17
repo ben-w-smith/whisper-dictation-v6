@@ -1,0 +1,59 @@
+---
+description: Design-token discipline and component-extraction rules for renderer pages and components
+globs: ["src/renderer/src/views/**/*.tsx", "src/renderer/src/components/**/*.tsx"]
+alwaysApply: false
+---
+
+# Renderer UI rules
+
+These files drive the settings / overlay / onboarding UI. They've accumulated
+visual drift from rapid prototyping (mixed borders, padding, hardcoded hexes,
+repeated inline patterns). These rules stop the drift.
+
+## Tokens, not hardcoded colors
+
+- **Never introduce a new hardcoded hex color** (`#xxxxxx`, `#xxx`, or
+  `rgb(...)` literal) in these files. Use tokens from
+  `src/renderer/src/styles/tokens.css`.
+- If the token you need does not exist, ADD it to `tokens.css` and reference
+  it. Name it semantically (`--surface-hover`, not `--gray-200`).
+- CI enforces this via `scripts/check-hex-colors.sh` — your change will fail
+  the build if it introduces new hex literals in this scope.
+- Existing hardcoded hexes are tech debt. Prefer replacing them when nearby.
+  Never add new ones.
+
+## Component extraction
+
+These files are large and have repeated inline patterns (Card, ToggleRow,
+RadioCard, AlertBanner, TabBar, SectionHeader, InfoRow). When you touch one:
+
+- **Do not grow `AIPage.tsx`, `HistoryPage.tsx`, `GeneralPage.tsx`, or
+  `App.tsx`** past their current size. If your change adds more than ~20 net
+  lines to any of these, extract a component first, then make the change
+  against the extracted primitive.
+- **If you are about to inline a second copy** of a Card / ToggleRow /
+  RadioCard / AlertBanner / TabBar pattern, stop. Extract the first one into
+  `src/renderer/src/components/`, add a Storybook story, then use it in both
+  places.
+- Prefer composition over prop explosion. A component with more than ~6 props
+  is a sign that two components want to come out.
+
+## Spec alignment
+
+The active visual direction is
+`docs/superpowers/specs/2026-04-14-settings-ui-redesign-design.md`. Read
+sections 1–7 before making visual changes. Warm neutrals + teal-for-purpose.
+Section cards, uppercase tracking on section headings, `space-y-6` between
+sections.
+
+## Storybook first
+
+When you extract a component, add a story. `pnpm storybook` is the iteration
+loop — use it. PRs that add components without stories should be rejected.
+
+## Accessibility and tokens
+
+- All interactive elements must have a visible focus state. Tailwind:
+  `focus-visible:ring-2 focus-visible:ring-accent/30 focus-visible:outline-none`.
+- Buttons and links need `aria-label` when the label is only an icon.
+- Disabled controls need `aria-disabled` in addition to `disabled`.

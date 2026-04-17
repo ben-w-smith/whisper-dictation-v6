@@ -1,6 +1,7 @@
 # Settings Window UI Redesign
 
 **Date:** 2026-04-14
+**Status:** ⚠️ SUPERSEDED (2026-04-16) — superseded by [`docs/plans/2026-04-16-editorial-polish.md`](../../plans/2026-04-16-editorial-polish.md) and [`docs/plans/2026-04-16-themeable-foundation.md`](../../plans/2026-04-16-themeable-foundation.md). The card-based section pattern prescribed below was reversed in favor of whitespace-separated toggle sections (see editorial-polish §4). Retained for historical context only; do not implement from this spec.
 **Scope:** Settings/Home window (900x600, sidebar navigation, 6 page views)
 **Approach:** Visual System Overhaul — new tokens + consistent component patterns + layout refinement
 **Design inspiration:** Wispr Flow (soft neutrals, warm tones, editorial restraint, teal accent)

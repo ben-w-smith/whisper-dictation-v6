@@ -1,0 +1,82 @@
+---
+description: Rules for adding or modifying cross-process IPC handlers and window routing
+globs: ["src/main/ipc.ts", "src/main/index.ts", "src/main/tray.ts", "src/preload/index.ts", "src/shared/ipc.ts"]
+alwaysApply: false
+---
+
+# IPC and window-routing rules
+
+## Window routing is role-based (registry)
+
+As of 2026-04-16 (`docs/plans/2026-04-16-window-id-addressing.md`), window
+routing goes through the registry in `src/main/windows.ts`. Five roles exist:
+
+| Role | Window |
+|---|---|
+| `background` | Hidden background window — XState + audio |
+| `overlay` | Floating recording pill |
+| `home` | Settings window |
+| `onboarding` | First-run setup |
+| `about` | Version info |
+
+### API
+
+```ts
+import { getWindow, sendTo, broadcast, registerWindow, unregisterWindow } from './windows'
+
+sendTo('home', IPC.HOTKEY_MOUSE_CAPTURED, buttonNumber)
+broadcast(IPC.SETTINGS_UPDATED, { key, value })
+const home = getWindow('home') // may be null
+```
+
+### Rules for this area
+
+1. **Register at creation.** Every `new BrowserWindow(...)` in
+   `src/main/ipc.ts` (or `src/main/index.ts`) must be followed by
+   `registerWindow(role, win.id)`. Add an `unregisterWindow(role)` in the
+   `closed` handler.
+2. **Do not add `w.getTitle() === '...'` in `src/main/`.** CI
+   (`scripts/.title-routing-baseline`) enforces a non-growing count. The
+   surviving call site in `e2e/helpers.ts` is deliberate test-only fallback.
+3. **`CAPTURE_MOUSE_BUTTON` still uses `event.sender.send()`** — not the
+   registry — because the response must route back to whichever window
+   initiated capture (Home or Onboarding), which the sender identifies
+   naturally.
+4. **Broadcasts iterate the registry, not `getAllWindows()`.** This means
+   DevTools windows and anything else ephemeral won't receive stray IPC.
+
+## IPC handler hygiene
+
+- Every handler must preserve the existing error shape — `AppError { code,
+  message, suggestion }`. Never throw raw strings or `Error` objects across
+  IPC boundaries.
+- Every new channel goes in `src/shared/ipc.ts`. Do not use string literals
+  for channel names at call sites.
+- Handlers that do file I/O or spawn subprocesses must clean up in `finally`
+  (see `START_WHISPER` for the pattern).
+- Handlers that broadcast to windows must check `!win.isDestroyed()` before
+  `webContents.send`.
+
+## Settings re-registration cascade
+
+The `SET_SETTING` handler in `ipc.ts` has cascading side-effects:
+
+- `keyboardShortcuts` / `mouseButton` → re-registers both keyboard and mouse
+  hotkeys (they share a callback).
+- `refinementModelPath` / `refinementEnabled` → restarts `llama-server`.
+
+If you add a setting with a side-effect, add the re-registration here — do
+not scatter it across renderer code. Update the tests in
+`src/main/shortcut-integration.test.ts` to cover the new cascade.
+
+## Propose-a-plan gate
+
+Any change that adds a new IPC channel, touches window creation, or modifies
+the `SET_SETTING` cascade: respond with a plan first, then wait for
+confirmation. The plan should include:
+
+- Channel name (new or existing)
+- Handler location (`main` or `renderer`)
+- Data shape (`src/shared/types.ts`)
+- Side effects triggered (subprocess lifecycle, hotkey re-registration, etc.)
+- Test coverage (`shortcut-integration.test.ts` or a new test)

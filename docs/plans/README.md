@@ -24,9 +24,10 @@ Phased, actionable plans for significant refactors and features. Unlike `spec.md
 
 | File | Status | One-liner |
 |------|--------|-----------|
-| [2026-04-16-themeable-foundation.md](./2026-04-16-themeable-foundation.md) | Draft | Introduce themes (Light / Warm / Dark / Black), accent swatches, radius slider, ambient background. |
-| [2026-04-16-overlay-border-beam.md](./2026-04-16-overlay-border-beam.md) | Draft | Replace the overlay's internal waveform bars with an audio-reactive border beam. |
-| [2026-04-16-editorial-polish.md](./2026-04-16-editorial-polish.md) | Draft | Typography, motion, copy voice, and onboarding moment polish. |
+| [2026-04-16-themeable-foundation.md](./2026-04-16-themeable-foundation.md) | Approved | Introduce themes (Light / Warm / Dark / Black), accent swatches, radius slider, ambient background. |
+| [2026-04-16-overlay-border-beam.md](./2026-04-16-overlay-border-beam.md) | Approved | Replace the overlay's internal waveform bars with an audio-reactive border beam. |
+| [2026-04-16-editorial-polish.md](./2026-04-16-editorial-polish.md) | Approved | Typography, motion, copy voice, and component polish. |
+| [2026-04-16-onboarding-redesign.md](./2026-04-16-onboarding-redesign.md) | Draft | Two-panel onboarding with live demos and theme-preview hover. (Split from editorial-polish §6.) |
 
 ---
 
@@ -44,7 +45,8 @@ The two tracks can run in parallel with explicit sync points. Neither track is b
 
 1. **`themeable-foundation`** — establishes new tokens; other design work depends on them.
 2. **`overlay-border-beam`** — overlay is theme-independent, can start in parallel with #1.
-3. **`editorial-polish`** — ship last; touches the most files and benefits most from the other two landing first.
+3. **`editorial-polish`** — after #1. Delivers fonts, motion, copy rubric, and component polish. Onboarding is explicitly out of scope.
+4. **`onboarding-redesign`** — last. Depends on tokens (#1), motion + rubric (#3), and optionally `BeamPill` (#2, has fallback).
 
 ### Cross-track sync points
 
@@ -63,18 +65,19 @@ Files that appear in multiple plans need a coordinated ordering so edits don't s
 
 ## Review Status
 
-A cross-plan review was performed 2026-04-16. Each plan has a **Pre-execution Review** section at the top with follow-ups to resolve before moving from `Draft` → `Approved`. Open the plan directly to see its checklist.
+A cross-plan review was performed 2026-04-16, and all review items were resolved the same day. Each Draft/Approved plan has a **Pre-execution Review** section at the top recording the resolutions. Open the plan directly for details.
 
 At-a-glance status:
 
 | Plan | Status | Review items |
 |------|--------|--------------|
-| [window-id-addressing](./2026-04-16-window-id-addressing.md) | Draft — ready to execute | none |
+| [window-id-addressing](./2026-04-16-window-id-addressing.md) | Done | none |
 | [shortcut-unification](./2026-04-16-shortcut-unification.md) | Draft — Phase 0 spike gates Phase 1 | none |
 | [audio-capture-modernization](./2026-04-16-audio-capture-modernization.md) | Draft — Phase 0 baseline first | none |
-| [themeable-foundation](./2026-04-16-themeable-foundation.md) | Draft — address review | 6 items |
-| [overlay-border-beam](./2026-04-16-overlay-border-beam.md) | Draft — address review | 4 items |
-| [editorial-polish](./2026-04-16-editorial-polish.md) | Draft — address review (esp. scope split) | 6 items |
+| [themeable-foundation](./2026-04-16-themeable-foundation.md) | Approved | 6/6 resolved |
+| [overlay-border-beam](./2026-04-16-overlay-border-beam.md) | Approved | 4/4 resolved |
+| [editorial-polish](./2026-04-16-editorial-polish.md) | Approved | 5/6 resolved (sidebar motion tuned on implementation); onboarding split out |
+| [onboarding-redesign](./2026-04-16-onboarding-redesign.md) | Draft | New — blocked on editorial-polish + themeable-foundation |
 
 ---
 
