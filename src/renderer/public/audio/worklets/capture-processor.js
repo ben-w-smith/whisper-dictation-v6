@@ -33,12 +33,12 @@ class CaptureProcessor extends AudioWorkletProcessor {
       this._smoothingFactor * rms +
       (1 - this._smoothingFactor) * this._smoothedLevel
 
-    // Ship a copy of the frame + RMS to the main thread
-    this._port.postMessage({
-      samples: channel.slice(0), // Float32Array copy
-      level: this._smoothedLevel,
-      frameCount: ++this._bufferCount,
-    })
+    // Transfer the frame buffer (zero-copy) + RMS to the main thread
+    const samples = channel.slice(0)
+    this._port.postMessage(
+      { samples, level: this._smoothedLevel, frameCount: ++this._bufferCount },
+      [samples.buffer]
+    )
 
     return true
   }
