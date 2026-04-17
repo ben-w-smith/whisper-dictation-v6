@@ -91,6 +91,11 @@
   75%      { transform: translateX(2px); }
 }
 
+@keyframes beam-status-pulse {
+  0%, 100% { opacity: 0.4; }
+  50%      { opacity: 1; }
+}
+
 /* Reduced motion — halt rotation, audio-reactive opacity still works */
 @media (prefers-reduced-motion: reduce) {
   .beam-pill::before {

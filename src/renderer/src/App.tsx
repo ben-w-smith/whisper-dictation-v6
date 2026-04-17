@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react'
+import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { useActorRef, useSelector } from '@xstate/react'
 import { createPipelineMachine } from './state/pipelineMachine'
 import { Overlay } from './components/Overlay'
@@ -9,7 +9,7 @@ import { getAudioCapture, type AudioCaptureResult } from './audio/capture'
 import { IPC } from '@shared/ipc'
 import { getDebugBus } from '@shared/debug'
 import type { AppSettings, AppError } from '@shared/types'
-import { DEFAULT_SETTINGS, WAVEFORM_GRADIENT, WAVEFORM_BAR_COUNT } from '@shared/constants'
+import { DEFAULT_SETTINGS } from '@shared/constants'
 
 function useHash(): string {
   const [hash, setHash] = useState(window.location.hash)
@@ -76,40 +76,17 @@ function OnboardingWindow(): React.ReactElement {
  */
 function OverlayWindow(): React.ReactElement {
   const [overlayState, setOverlayState] = useState<string>('idle')
-  // Ref-based audio levels — updated directly, bypassing React state for zero-lag bars
   const audioLevelsRef = useRef<number[]>([])
   const [audioLevelScalar, setAudioLevelScalar] = useState(0)
-  const barsRef = useRef<(HTMLDivElement | null)[]>([])
-  const rafRef = useRef<number>(0)
+  const [elapsedMs, setElapsedMs] = useState(0)
   const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  // rAF loop — scrolling equalizer: rightmost = newest, leftmost = oldest
-  // Each bar gets a static gradient color; height updates from audio levels
-  useEffect(() => {
-    const tick = () => {
-      const levels = audioLevelsRef.current
-      const bars = barsRef.current
-      for (let i = 0; i < WAVEFORM_BAR_COUNT; i++) {
-        const bar = bars[i]
-        if (!bar) continue
-        // Bar 0 = oldest, bar N-1 = newest (scrolling right)
-        const levelIndex = levels.length - WAVEFORM_BAR_COUNT + i
-        const level = levelIndex >= 0 ? (levels[levelIndex] ?? 0) : 0
-        const height = Math.max(2, Math.min(16, level * 160))
-        bar.style.height = `${height}px`
-      }
-      rafRef.current = requestAnimationFrame(tick)
-    }
-    rafRef.current = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(rafRef.current)
-  }, [])
 
   useEffect(() => {
     const unsubState = window.api.on('overlay:state-update', (data: unknown) => {
       const d = data as { state: string; audioLevels: number[]; elapsedMs: number; text: string; error: string; errorSuggestion?: string; errorCode?: string; refinementSkipped?: boolean }
       setOverlayState(d.state)
-      // Write directly to ref for rAF — no React state update for audio levels
       audioLevelsRef.current = d.audioLevels
+      if (d.elapsedMs !== undefined) setElapsedMs(d.elapsedMs)
       // Compute mean for BeamPill audio-reactive beam
       if (d.state === 'recording' && d.audioLevels.length > 0) {
         const mean = d.audioLevels.reduce((a, b) => a + b, 0) / d.audioLevels.length
@@ -159,6 +136,10 @@ function OverlayWindow(): React.ReactElement {
 
   const beamState = overlayState as 'recording' | 'transcribing' | 'complete' | 'error'
 
+  const timerSeconds = Math.floor(elapsedMs / 1000)
+  const timerMinutes = Math.floor(timerSeconds / 60)
+  const timerDisplay = `${timerMinutes}:${(timerSeconds % 60).toString().padStart(2, '0')}`
+
   return (
     <div
       className={`h-full flex items-center justify-center ${
@@ -169,36 +150,34 @@ function OverlayWindow(): React.ReactElement {
       <BeamPill state={beamState} audioLevel={audioLevelScalar}>
         <div className="flex items-center justify-center h-[32px]">
           {overlayState === 'recording' && (
-            <div className="flex items-center justify-between gap-2 px-1.5 h-full">
-              {/* Cancel button (X) — gray matching border */}
+            <div className="flex items-center justify-between gap-2 px-2.5 h-full group">
+              {/* Cancel button (X) — visible on hover */}
               <button
                 onClick={(e) => { e.stopPropagation(); handleCancel() }}
-                className="shrink-0 w-6 h-6 rounded-full bg-transparent hover:bg-white/10 flex items-center justify-center transition-colors"
+                className="shrink-0 w-[22px] h-[22px] rounded-full bg-white/[0.08] hover:bg-white/[0.14] flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100"
+                aria-label="Cancel recording"
               >
-                <svg className="w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-3 h-3 text-white/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
 
-              {/* Waveform bars (kept during Step B migration) */}
-              <div className="flex items-center justify-center gap-[2px] flex-1 h-full">
-                {[...Array(WAVEFORM_BAR_COUNT)].map((_, i) => (
-                  <div
-                    key={i}
-                    ref={(el) => { barsRef.current[i] = el }}
-                    className="w-[2px] rounded-full transition-none"
-                    style={{
-                      backgroundColor: WAVEFORM_GRADIENT[i],
-                      height: '2px',
-                    }}
-                  />
-                ))}
-              </div>
+              {/* Status dot — solid red, pulses */}
+              <div className="w-[6px] h-[6px] rounded-full bg-[#f87171] animate-[beam-status-pulse_1.4s_linear_infinite]" />
+
+              {/* Elapsed timer */}
+              <span
+                className="font-mono tabular-nums text-[11px] text-white/70 select-none"
+                aria-label={`Recording elapsed: ${timerMinutes} minutes ${(timerSeconds % 60)} seconds`}
+              >
+                {timerDisplay}
+              </span>
 
               {/* Stop button — red with square */}
               <button
                 onClick={(e) => { e.stopPropagation(); handleStop() }}
-                className="shrink-0 w-6 h-6 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center transition-colors"
+                className="shrink-0 w-[22px] h-[22px] rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center transition-colors"
+                aria-label="Stop recording"
               >
                 <div className="w-2 h-2 rounded-[1px] bg-white" />
               </button>
@@ -206,22 +185,25 @@ function OverlayWindow(): React.ReactElement {
           )}
 
           {overlayState === 'transcribing' && (
-            <div className="flex items-center justify-center px-4 h-full">
-              <div className="w-[6px] h-[6px] rounded-full bg-blue-400 animate-pulse" />
+            <div className="flex items-center gap-2 px-2.5 h-full">
+              <div className="w-[6px] h-[6px] rounded-full bg-[#93c5fd]" />
+              <span className="font-mono tabular-nums text-[11px] text-white/70 select-none">{timerDisplay}</span>
             </div>
           )}
 
           {overlayState === 'complete' && (
-            <div className="flex items-center justify-center px-4 h-full">
-              <svg className="w-3.5 h-3.5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+            <div className="flex items-center justify-center px-3 h-full">
+              <svg className="w-3.5 h-3.5 text-[#4ade80]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
             </div>
           )}
 
           {overlayState === 'error' && (
-            <div className="flex items-center justify-center px-4 h-full">
-              <div className="w-[6px] h-[6px] rounded-full bg-orange-400" />
+            <div className="flex items-center justify-center px-3 h-full">
+              <svg className="w-4 h-4 text-[#fbbf24]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
             </div>
           )}
         </div>
