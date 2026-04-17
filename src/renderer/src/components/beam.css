@@ -31,6 +31,33 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
+  /*
+   * Horizontal edge fade. Beam brightness ramps from 0 at the very left/
+   * right of the pill up to full across the middle ~75%, so the traveling
+   * highlight doesn't punch through behind the cancel (left) and stop /
+   * spinner (right) buttons. 22/260 ≈ 8.5% per button, plus a little
+   * padding; 14% → 86% lands the full-strength band just past the buttons
+   * on each side.
+   *
+   * `mask-composite` isn't needed — we only have the one mask layer. The
+   * `-webkit-` prefix is for older Chromium without the unprefixed prop;
+   * Electron's current Chromium supports both, but keeping the prefix
+   * avoids a rendering surprise if the runtime is ever older.
+   */
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 14%,
+    black 86%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 14%,
+    black 86%,
+    transparent 100%
+  );
 }
 
 .beam-pill-shell {
